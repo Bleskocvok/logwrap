@@ -1,0 +1,492 @@
+#define _POSIX_C_SOURCE 200809L
+
+#include <unistd.h>     // write, read, close, fork, exec, pipe, dup2
+#include <sys/wait.h>   // waitpid
+#include <sys/types.h>  // pid_t
+#include <poll.h>       // poll
+#include <time.h>       // clock_gettime
+
+#include <stdio.h>      // printf, dprintf, perror
+#include <stdlib.h>     // NULL, free, exit, strtod
+#include <string.h>     // memset, memcpy, strcmp
+#include <errno.h>      // errno
+#include <err.h>        // err
+
+
+static int DELAY_MSEC = -1;
+static int DETACH = 0;
+static int JOIN = 0;
+static int PREFIX = 0;
+
+
+typedef struct buf_t
+{
+    // TODO: Don't set a hard limit on how much data can be temporarily stored.
+    char data[ 1024 ];
+    unsigned int size;
+
+    struct timespec time_begin;
+    struct timespec time_unfinished;
+    struct timespec time_last;
+
+    int newline_present;
+
+} buf_t;
+
+
+typedef struct pid_vec_t
+{
+    pid_t pids[ 1024 ];
+    unsigned int size;
+
+} pid_vec_t;
+
+
+typedef struct output_t
+{
+    char* cmd;
+
+    pid_vec_t pids;
+
+} output_t;
+
+
+struct timespec get_time()
+{
+    struct timespec ts;
+    if ( clock_gettime( CLOCK_MONOTONIC, &ts ) == -1 )
+        perror( "clock_gettime" ), exit( 1 );
+    return ts;
+}
+
+
+void pid_vec_init( pid_vec_t* vec )
+{
+    memset( vec, 0, sizeof( pid_vec_t ) );
+}
+
+
+void pid_vec_try_reap( pid_vec_t* vec )
+{
+    char remove[ sizeof( vec->pids ) / sizeof( vec->pids[ 0 ] ) ] = { 0 };
+
+    for ( unsigned i = 0; i < vec->size; ++i )
+    {
+        int status;
+        int r = waitpid( vec->pids[ i ], &status, WNOHANG );
+        if ( r == -1 )
+        {
+            perror( "waitpid" );
+            continue;
+        }
+        remove[ i ] = r > 0;
+    }
+
+    int last = 0;
+    for ( unsigned i = 0; i < vec->size; ++i )
+    {
+        if ( remove[ i ] ) continue;
+
+        vec->pids[ last ] = vec->pids[ i ];
+        ++last;
+    }
+
+    vec->size = last;
+}
+
+
+void pid_vec_push( pid_vec_t* vec, pid_t pid )
+{
+    // This could be solved in a much better way which would not be relying on
+    // the executed programs to finish within a reasonable time frame. One
+    // possible approach is catching SIGCHLD to see when a child has died.
+    while ( vec->size >= sizeof( vec->pids ) / sizeof( vec->pids[ 0 ] ) )
+        pid_vec_try_reap( vec );
+
+    vec->pids[ vec->size ] = pid;
+    ++vec->size;
+}
+
+
+void pid_vec_wait( pid_vec_t* vec )
+{
+    for ( unsigned i = 0; i < vec->size; ++i )
+    {
+        int status;
+        if ( waitpid( vec->pids[ i ], &status, 0 ) == -1 )
+            perror( "waitpid" );
+    }
+
+    pid_vec_init( vec );
+}
+
+
+void output_init( output_t* o )
+{
+    memset( o, 0, sizeof( output_t ) );
+}
+
+
+void buf_init( buf_t* b )
+{
+    memset( b, 0, sizeof( buf_t ) );
+    b->time_begin      = get_time();
+    b->time_unfinished = b->time_begin;
+    b->time_last       = b->time_begin;
+}
+
+
+void buf_push( buf_t* b, char c )
+{
+    if ( b->size >= sizeof b->data )
+        return;
+
+    b->data[ b->size ] = c;
+    ++b->size;
+}
+
+
+void buf_append( buf_t* b, const char* str, int len )
+{
+    struct timespec ts = get_time();
+    if ( b->size == 0 )
+        b->time_begin = ts;
+
+    b->time_last = ts;
+
+    for ( int i = 0; i < len; ++i )
+    {
+        if ( str[ i ] == '\n' )
+        {
+            b->newline_present = 1;
+            // I think this is correct, even if the code doesn't care
+            // whether an unfinished line begins after this character.
+            b->time_unfinished = ts;
+        }
+        buf_push( b, str[ i ] );
+    }
+}
+
+
+int buf_is_full( const buf_t* b ) { return b->size >= sizeof( b->data ); }
+int buf_size( const buf_t* b ) { return b->size; }
+
+
+int fork_exec_out( const char* cmd, const char* output, int length );
+
+
+void output_flush( output_t* output, const char* str, int len )
+{
+    if ( DETACH )
+    {
+        pid_t pid = fork();
+        if ( pid != -1 )
+        {
+            if ( pid == 0 )
+                exit( fork_exec_out( output->cmd, str, len ) == -1 ? 1 : 0 );
+            pid_vec_push( &output->pids, pid );
+        }
+        else
+            perror( "fork" );
+    }
+    else
+        fork_exec_out( output->cmd, str, len );
+}
+
+
+void buf_flush( buf_t* b, output_t* output, const char* prefix )
+{
+    if ( buf_size( b ) == 0 )
+        return;
+
+    unsigned end = 0;
+    for ( unsigned i = 0; i < b->size; ++i )
+    {
+        if ( b->data[ i ] == '\n' )
+            end = i;
+    }
+
+    char str[ 2 * sizeof b->data ] = { 0 };
+    snprintf( str, sizeof str, "%s%.*s", prefix, ( int )sizeof b->data, b->data );
+
+    // output_flush( output, b->data, end + 1 );
+    output_flush( output, str, end + 1 + strlen( prefix ) );
+
+    int new_size = b->size - end - 1;
+    if ( end + 1 < b->size )
+        memmove( b->data, b->data + end + 1, new_size );
+
+    b->size = new_size;
+    b->time_begin = b->time_unfinished;
+    b->newline_present = 0;
+
+    b->time_begin = new_size > 0 ? b->time_unfinished : get_time();
+}
+
+
+void buf_try_flush( buf_t* b, output_t* o, int thresh_ms, const char* prefix )
+{
+    if ( !b->newline_present )
+        return;
+
+    struct timespec now = get_time();
+
+    // TODO: This sucks, use a better way to do arithmetics with timespec.
+    double diff =   now.tv_sec  - b->time_begin.tv_sec
+                + ( now.tv_nsec - b->time_begin.tv_nsec ) / 1e9;
+    diff *= 1e3;
+    if ( thresh_ms < 0 || diff >= thresh_ms )
+        buf_flush( b, o, prefix );
+}
+
+
+int fork_exec_out( const char* cmd, const char* output, int length )
+{
+    int p_out[ 2 ];
+    if ( pipe( p_out ) == -1 )
+        return -1;
+
+    pid_t pid = fork();
+    if ( pid == -1 ) return perror( "fork" ), -1;
+
+    if ( pid > 0 )
+    {
+        close( p_out[ 0 ] );
+
+        if ( write( p_out[ 1 ], output, length ) == -1 )
+            perror( "write" );
+
+        close( p_out[ 1 ] );
+
+        if ( waitpid( pid, NULL, 0 ) == -1 )
+            perror( "waitpid" );
+
+        return pid;
+    }
+
+    close( p_out[ 1 ] );
+    if ( dup2( p_out[ 0 ], STDIN_FILENO ) == -1 )
+        exit( 100 );
+    close( p_out[ 0 ] );
+
+    execlp( cmd, cmd, NULL );
+    exit( 100 );
+}
+
+
+int process( int fd, buf_t* buf )
+{
+    char tmp[ sizeof buf->data ] = { 0 };
+
+    int bytes;
+    if ( ( bytes = read( fd, tmp, sizeof tmp ) ) == -1 )
+        return -1;
+
+    buf_append( buf, tmp, bytes );
+
+    return bytes;
+}
+
+
+int parent( pid_t child, int fd_child_out, int fd_child_err, int* status,
+            output_t outputs[ 2 ] )
+{
+    struct pollfd polled[ 2 ] = { { .fd = fd_child_out, .events = POLLIN, },
+                                  { .fd = fd_child_err, .events = POLLIN, }, };
+
+    const char* prefs[ 2 ] = { "STDOUT: ", "STDERR: " };
+    buf_t stor[ 2 ];
+    buf_init( &stor[ 0 ] );
+    buf_init( &stor[ 1 ] );
+
+    buf_t* bufs[ 2 ] = { &stor[ 0 ], &stor[ 1 ] };
+    output_t* outs[ 2 ] = { &outputs[ 0 ], &outputs[ 1 ] };
+
+    if ( JOIN )
+    {
+        outs[ 1 ] = outputs;
+        bufs[ 1 ] = stor;
+    }
+
+    if ( !PREFIX )
+        prefs[ 1 ] = prefs[ 0 ] = "";
+
+    while ( polled[ 0 ].fd != -1 || polled[ 1 ].fd != -1 )
+    {
+        // TODO: Calculate as the lower value from time remaining.
+        // 0.2 sec timeout.
+        int p = poll( polled, 2, 200 );
+        if ( p == -1 ) perror( "polling" );
+
+        for ( int i = 0; i < 2; i++ )
+        {
+            int ended = 0;
+
+            if ( polled[ i ].fd == -1 )
+                continue;
+
+            if ( ( polled[ i ].revents & ( POLLIN | POLLHUP ) ) )
+                if ( process( polled[ i ].fd, bufs[ i ] ) == 0 )
+                    ended = 1;
+
+            if ( ( polled[ i ].revents & POLLERR ) == POLLERR )
+            {
+                polled[ i ].fd = -1;
+                dprintf( 1, "%d: error\n", i );
+            }
+
+            if ( ended || polled[ i ].fd == -1 )
+            {
+                buf_flush( bufs[ i ], outs[ i ], prefs[ i ] );
+                polled[ i ].fd = -1;
+            }
+        }
+
+        for ( int i = 0; i < 2; ++i )
+        {
+            buf_try_flush( bufs[ i ], outs[ i ], DELAY_MSEC, prefs[ i ] );
+
+            pid_vec_try_reap( &outs[ i ]->pids );
+        }
+    }
+
+    // flush unterminated lines
+    for ( int i = 0; i < 2; ++i )
+    {
+        if ( polled[ i ].fd == -1 || bufs[ i ]->size == 0 )
+            continue;
+
+        if ( buf_size( bufs[ i ] ) > 0 )
+            buf_flush( bufs[ i ], outs[ i ], prefs[ i ] );
+    }
+
+    close( fd_child_out );
+    close( fd_child_err );
+
+    if ( waitpid( child, status, 0 ) == -1 )
+        return perror( "waitpid" ), -1;
+    return 0;
+}
+
+
+int wrap( const char* cmd, output_t outputs[ 2 ] )
+{
+    int p_out[ 2 ];
+    int p_err[ 2 ];
+    if ( pipe( p_out ) == -1 || pipe( p_err ) == -1 )
+        return -1;
+
+    pid_t pid = fork();
+    if ( pid == -1 ) return perror( "fork" ), -1;
+
+    if ( pid > 0 )
+    {
+        close( p_out[ 1 ] );
+        close( p_err[ 1 ] );
+        int status;
+        int r = parent( pid, p_out[ 0 ], p_err[ 0 ], &status, outputs );
+
+        // Wait for outstanding processes.
+        for ( int i = 0; i < 2; ++i )
+            pid_vec_wait( &outputs[ i ].pids );
+
+        if ( r != -1 )
+        {
+            if ( WIFEXITED( status ) ) return WEXITSTATUS( status );
+            if ( WIFSIGNALED( status ) ) return 1;
+                // return printf( "signal %d\n", WTERMSIG( status ) ), 1;
+        }
+        return r == -1 ? 1 : 0;
+    }
+
+    close( p_out[ 0 ] );
+    close( p_err[ 0 ] );
+    if ( dup2( p_out[ 1 ], STDOUT_FILENO ) == -1
+      || dup2( p_err[ 1 ], STDERR_FILENO ) == -1 )
+        perror( "dup2" ), exit( 100 );
+    close( p_out[ 1 ] );
+    close( p_err[ 1 ] );
+
+    execlp( cmd, cmd, NULL );
+    perror( "exec" ), exit( 100 );
+}
+
+
+void help()
+{
+    printf( "\n"
+            "  -h           help\n"
+            "  -s  sec      group consecutive messages within given window of time\n"
+            "  -j           join stdout and stderr\n"
+            "  -d           detach executed cmd\n"
+            "  -p           prefix \"stdout\" and \"stderr\"\n"
+            );
+}
+
+
+void usage( char** argv )
+{
+    printf( "usage: %s [-h] [-s sec] [-j] [-d] [-p] <cmd> [<out cmd>] [<err cmd>]\n",
+            argv[ 0 ] );
+}
+
+
+int main( int argc, char** argv )
+{
+    if ( argc < 2 )
+        return usage( argv ), 1;
+
+    while ( argc > 1 )
+    {
+        if ( strlen( argv[ 1 ] ) != 2 || argv[ 1 ][ 0 ] != '-' )
+            break;
+
+        char arg = argv[ 1 ][ 1 ];
+
+        if ( arg == 'h' )
+        {
+            return usage( argv ), help(), 0;
+        }
+        if ( arg == 's' )
+        {
+            if ( argc < 3 ) return usage( argv ), 1;
+
+            double sec = strtod( argv[ 2 ], NULL );
+            DELAY_MSEC = sec * 1000;
+
+            argc--;
+            argv++;
+        }
+        else if ( arg == 'd' )
+        {
+            DETACH = 1;
+        }
+        else if ( arg == 'j' )
+        {
+            JOIN = 1;
+        }
+        else if ( arg == 'p' )
+        {
+            PREFIX = 1;
+        }
+        else
+            return usage( argv ), 1;
+
+        argc--;
+        argv++;
+    }
+
+    char* cmd = argv[ 1 ];
+    char* out_cmd = argc > 2 ? argv[ 2 ] : "cat";
+    char* err_cmd = argc > 3 ? argv[ 3 ] : "cat";
+
+    output_t outputs[ 2 ];
+
+    for ( int i = 0; i < 2; ++i )
+        output_init( outputs + i );
+
+    outputs[ 0 ].cmd = out_cmd;
+    outputs[ 1 ].cmd = err_cmd;
+
+    return wrap( cmd, outputs );
+}
