@@ -22,11 +22,15 @@ int start_connection( const char* server_input );
 void error( const char* str );
 void assert_put( int fd, const char* str );
 void assert_get( int fd, const char* expected );
+void assert_timeout_get( int fd, int timeout_ms );
 pid_t fork_exec( const char* cmd, char* const* argv );
 
 int main( void )
 {
     int rv = 1;
+
+    unlink( CMD_OUTPUT_SOCKET );
+    unlink( SERVER_INPUT_SOCKET );
 
     int out_fd = -1;
     int in_fd = start_server( CMD_OUTPUT_SOCKET );
@@ -49,7 +53,7 @@ int main( void )
     close( out_fd );
 
     // We shouldn't get any extra output.
-    assert_get( in_fd, "" );
+    assert_timeout_get( in_fd, 1000 );
 
     out_fd = -1;
 
@@ -83,7 +87,7 @@ int poll_read_fd( int fd, int timeout_ms )
 int get( int sock_fd, char* buf, int size, int timeout_ms )
 {
     if ( poll_read_fd( sock_fd, timeout_ms) != 1 )
-        return fprintf( stderr, "timeout\n" ), -1;
+        return -2;
 
     int rv = -1;
     int client = accept( sock_fd, 0, 0 );
@@ -92,7 +96,7 @@ int get( int sock_fd, char* buf, int size, int timeout_ms )
 
     if ( poll_read_fd( client, timeout_ms) != 1 )
     {
-        fprintf( stderr, "timeout\n" );
+        rv = -2;
         goto end;
     }
 
@@ -221,14 +225,26 @@ void assert_put( int fd, const char* str )
     assert( put( fd, str, strlen( str ) ) == 0 );
 }
 
+void assert_timeout_get( int fd, int timeout_ms )
+{
+    char buf[ 4096 ];
+    int got = get( fd, buf, sizeof buf, timeout_ms );
+    assert( got == -2 );
+}
+
 void assert_get( int fd, const char* expected )
 {
     int size = strlen( expected );
 
     char buf[ 4096 ];
-    int got = get( fd, buf, sizeof buf, 50000 );
-    if ( got == -1 )
+    int got = get( fd, buf, sizeof buf, 5000 );
+    if ( got < 0 )
+    {
+        fprintf( stderr, "%s while waiting for: \"", got == -2 ? "timeout" : "error" );
+        print_escaped( expected, size);
+        fprintf( stderr, "\"\n" );
         exit( 1 );
+    }
 
     if ( got > ( int )sizeof buf
             || got != size
