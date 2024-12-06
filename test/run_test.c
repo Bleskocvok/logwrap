@@ -11,7 +11,6 @@
 #include <stdio.h>          // perror
 #include <errno.h>          // errno
 #include <stdlib.h>         // exit, NULL
-#include <signal.h>         // kill
 #include <assert.h>         // assert
 #include <string.h>         // memcmp, strerror, strlen
 
@@ -49,9 +48,6 @@ int main( void )
     // itself.
     close( out_fd );
     out_fd = -1;
-
-    // if ( kill( pid, SIGINT ) == -1 )
-    //     perror( "kill" );
 
     int status;
     if ( waitpid( pid, &status, 0 ) == -1 )

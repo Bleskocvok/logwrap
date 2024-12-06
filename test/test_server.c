@@ -61,15 +61,6 @@ int main( void )
         goto end;
     }
 
-    // TODO: Only one accept is enough.
-    // int client;
-    // while ( ( client = accept( sock_fd, 0, 0 ) ) != -1 )
-    // {
-    //     int r = echo( client, 1 );
-    //     close( client );
-    //     if ( r == -1 )
-    //         return close( sock_fd ), 1;
-    // }
     client = accept( sock_fd, 0, 0 );
     if ( client == -1 )
     {
