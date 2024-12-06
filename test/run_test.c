@@ -47,11 +47,18 @@ int main( void )
     // Closes the connection, so the ‹test_server› executable terminates
     // itself.
     close( out_fd );
+
+    // We shouldn't get any extra output.
+    assert_get( in_fd, "" );
+
     out_fd = -1;
 
     int status;
     if ( waitpid( pid, &status, 0 ) == -1 )
         goto end;
+
+    assert( WIFEXITED( status ) );
+    assert( WEXITSTATUS( status ) == 0 );
 
     rv = 0;
 end:
