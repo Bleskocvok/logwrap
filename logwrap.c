@@ -43,8 +43,8 @@ typedef struct pid_vec_t
 
 typedef struct prog_t
 {
-    const char* cmd;
-    char* const* args;
+    char* cmd;
+    char** args;
 
 } prog_t;
 
@@ -453,6 +453,9 @@ void print_args( prog_t prog )
 }
 
 
+void parse_args( int argc, char* const* argv, prog_t progs[ 3 ] );
+
+
 int main( int argc, char** argv )
 {
     if ( argc < 2 )
@@ -504,6 +507,23 @@ int main( int argc, char** argv )
     for ( int i = 0; i < 2; ++i )
         output_init( outputs + i );
 
+    prog_t progs[ 3 ] = { 0 };
+
+    parse_args( argc, argv, progs );
+
+    outputs[ 0 ].prog = progs[ 1 ];
+    outputs[ 1 ].prog = progs[ 2 ];
+
+    print_args( progs[ 0 ] );
+    print_args( progs[ 1 ] );
+    print_args( progs[ 2 ] );
+
+    return wrap( progs[ 0 ], outputs );
+}
+
+
+void parse_args( int argc, char* const* argv, prog_t progs[ 3 ] )
+{
     int seps = 0;
     for ( int i = 1; i < argc; i++ )
         if ( strcmp( argv[ i ], "--" ) == 0 )
@@ -525,18 +545,24 @@ int main( int argc, char** argv )
                     current++;
             }
             else
-                counts[ current ]++;
+                printf("counts[ %d ]++ for %s\n", current, argv[i]), counts[ current ]++;
         }
 
-        char** args[ 3 ] = { 0 };
         for ( int i = 0; i < 3; i++ )
         {
+            printf( "counts[ %d ] → %d\n", i, counts[ i ] );
             if ( counts[ i ] == 0 )
                 counts[ i ] = 1;
-            args[ i ] = ( char** )malloc( ( 1 + counts[ i ] ) * sizeof( char** ) );
-            memset( args[ i ], 0, ( 1 + counts[ i ] ) * sizeof( char** ) );
+
+            unsigned size = ( 1 + counts[ i ] ) * sizeof( char** );
+            progs[ i ].args = ( char** )malloc( size );
+            if ( !progs[ i ].args )
+                perror( "malloc" ), exit( 101 );
+
+            memset( progs[ i ].args, 0, size );
         }
 
+        current = 0;
         int j = 0;
         for ( int i = 1; i < argc; i++ )
         {
@@ -550,65 +576,41 @@ int main( int argc, char** argv )
             }
             else
             {
-                args[ current ][ j ] = argv[ i ];
+                printf( "argv[ %d ] → %s\n", i, argv[ i ] );
+                printf( "counts[ %d ] → %d\n", i, counts[ current ] );
+                printf( "progs[ %d ].args[ %d ] = argv[ %d ] → %s\n", current, j, i, argv[ i ] );
+                progs[ current ].args[ j ] = argv[ i ];
                 j++;
             }
         }
 
-        for ( int i = 0; i < 3; i++ )
-            args[ i ][ counts[ i ] ] = NULL;
-
-        prog_t prog;
-
-        char* cmd = argv[ 1 ];
-        // TODO: This is wrong. Command are now in args[ 0 ] and args[ 1 ]
-        char* out_cmd = argc > 2 ? argv[ 2 ] : "cat";
-        char* err_cmd = argc > 3 ? argv[ 3 ] : "cat";
-
-        prog.cmd = args[ 0 ][ 0 ];
-        prog.args = args[ 0 ];
-
-        out_cmd = args[ 1 ][ 0 ] ? args[ 1 ][ 0 ] : "cat";
-        err_cmd = args[ 2 ][ 0 ] ? args[ 2 ][ 0 ] : "cat";
-
-        outputs[ 0 ].prog.cmd = out_cmd;
-        outputs[ 1 ].prog.cmd = err_cmd;
-        outputs[ 0 ].prog.args = args[ 1 ];
-        outputs[ 1 ].prog.args = args[ 2 ];
-
         for ( int i = 1; i < 3; i++ )
-            if ( counts[ i ] == 1 )
-                args[ i ][ 0 ] = i == 1 ? out_cmd : err_cmd;
+            if ( progs[ i ].args[ 0 ] == NULL )
+                progs[ i ].args[ 0 ] = "cat";
 
-        print_args( prog );
-        print_args( outputs[ 0 ].prog );
-        print_args( outputs[ 1 ].prog );
+        for ( int i = 0; i < 3; i++ )
+        {
+            progs[ i ].args[ counts[ i ] ] = NULL;
+            progs[ i ].cmd = progs[ i ].args[ 0 ];
+        }
 
-        return wrap( prog, outputs );
+        return;
     }
     else
     {
-        prog_t prog;
-        char* cmd = argv[ 1 ];
-        char* out_cmd = argc > 2 ? argv[ 2 ] : "cat";
-        char* err_cmd = argc > 3 ? argv[ 3 ] : "cat";
+        char* args[ 3 ];
+        args[ 0 ] = argv[ 1 ];
+        args[ 1 ] = argc > 2 ? argv[ 2 ] : "cat";
+        args[ 2 ] = argc > 3 ? argv[ 3 ] : "cat";
 
-        char* args[ 3 ][ 2 ] = { { cmd, NULL },
-                                 { out_cmd, NULL },
-                                 { err_cmd, NULL } };
+        for ( int i = 0; i < 3; i++ )
+        {
+            progs[ i ].cmd = args[ i ];
+            progs[ i ].args = malloc( 2 * sizeof( *progs[ i ].args ) );
+            progs[ i ].args[ 0 ] = progs[ i ].cmd;
+            progs[ i ].args[ 1 ] = NULL;
+        }
 
-        prog.args = args[ 0 ];
-        prog.cmd = cmd;
-
-        outputs[ 0 ].prog.cmd = out_cmd;
-        outputs[ 1 ].prog.cmd = err_cmd;
-        outputs[ 0 ].prog.args = args[ 1 ];
-        outputs[ 1 ].prog.args = args[ 2 ];
-
-        print_args( prog );
-        print_args( outputs[ 0 ].prog );
-        print_args( outputs[ 1 ].prog );
-
-        return wrap( prog, outputs );
+        return;
     }
 }
