@@ -9,7 +9,6 @@
 #include <stdio.h>      // printf, dprintf, perror
 #include <stdlib.h>     // NULL, free, exit, strtod
 #include <string.h>     // memset, memcpy, strcmp
-#include <errno.h>      // errno
 #include <err.h>        // err
 
 
@@ -42,9 +41,19 @@ typedef struct pid_vec_t
 } pid_vec_t;
 
 
+typedef struct prog_t
+{
+    const char* cmd;
+    char* const* args;
+
+} prog_t;
+
+
+void print_args( prog_t prog );
+
 typedef struct output_t
 {
-    char* cmd;
+    prog_t prog;
 
     pid_vec_t pids;
 
@@ -172,7 +181,7 @@ int buf_is_full( const buf_t* b ) { return b->size >= sizeof( b->data ); }
 int buf_size( const buf_t* b ) { return b->size; }
 
 
-int fork_exec_out( const char* cmd, const char* output, int length );
+int fork_exec_out( prog_t prog, const char* output, int length );
 
 
 void output_flush( output_t* output, const char* str, int len )
@@ -183,14 +192,14 @@ void output_flush( output_t* output, const char* str, int len )
         if ( pid != -1 )
         {
             if ( pid == 0 )
-                exit( fork_exec_out( output->cmd, str, len ) == -1 ? 1 : 0 );
+                exit( fork_exec_out( output->prog, str, len ) == -1 ? 1 : 0 );
             pid_vec_push( &output->pids, pid );
         }
         else
             perror( "fork" );
     }
     else
-        fork_exec_out( output->cmd, str, len );
+        fork_exec_out( output->prog, str, len );
 }
 
 
@@ -240,7 +249,7 @@ void buf_try_flush( buf_t* b, output_t* o, int thresh_ms, const char* prefix )
 }
 
 
-int fork_exec_out( const char* cmd, const char* output, int length )
+int fork_exec_out( prog_t prog, const char* output, int length )
 {
     int p_out[ 2 ];
     if ( pipe( p_out ) == -1 )
@@ -269,7 +278,7 @@ int fork_exec_out( const char* cmd, const char* output, int length )
         exit( 100 );
     close( p_out[ 0 ] );
 
-    execlp( cmd, cmd, NULL );
+    execvp( prog.cmd, prog.args );
     exit( 100 );
 }
 
@@ -369,7 +378,7 @@ int parent( pid_t child, int fd_child_out, int fd_child_err, int* status,
 }
 
 
-int wrap( const char* cmd, output_t outputs[ 2 ] )
+int wrap( prog_t prog, output_t outputs[ 2 ] )
 {
     int p_out[ 2 ];
     int p_err[ 2 ];
@@ -393,6 +402,7 @@ int wrap( const char* cmd, output_t outputs[ 2 ] )
         if ( r != -1 )
         {
             if ( WIFEXITED( status ) ) return WEXITSTATUS( status );
+            // TODO: Probably return something like 100 + sig.
             if ( WIFSIGNALED( status ) ) return 1;
                 // return printf( "signal %d\n", WTERMSIG( status ) ), 1;
         }
@@ -407,7 +417,7 @@ int wrap( const char* cmd, output_t outputs[ 2 ] )
     close( p_out[ 1 ] );
     close( p_err[ 1 ] );
 
-    execlp( cmd, cmd, NULL );
+    execvp( prog.cmd, prog.args );
     perror( "exec" ), exit( 100 );
 }
 
@@ -431,6 +441,18 @@ void usage( char** argv )
 }
 
 
+void print_args( prog_t prog )
+{
+    printf( "cmd → %s\n", prog.cmd );
+    for ( int i = 0; ; i++ )
+    {
+        printf( "args[ %d ] -> %s\n", i, prog.args[ i ] ? prog.args[ i ] : "NULL" );
+        if ( !prog.args[ i ] )
+            break;
+    }
+}
+
+
 int main( int argc, char** argv )
 {
     if ( argc < 2 )
@@ -438,7 +460,8 @@ int main( int argc, char** argv )
 
     while ( argc > 1 )
     {
-        if ( strlen( argv[ 1 ] ) != 2 || argv[ 1 ][ 0 ] != '-' )
+        if ( strlen( argv[ 1 ] ) != 2 || argv[ 1 ][ 0 ] != '-'
+                || strcmp( argv[ 1 ], "--" ) == 0 )
             break;
 
         char arg = argv[ 1 ][ 1 ];
@@ -476,17 +499,116 @@ int main( int argc, char** argv )
         argv++;
     }
 
-    char* cmd = argv[ 1 ];
-    char* out_cmd = argc > 2 ? argv[ 2 ] : "cat";
-    char* err_cmd = argc > 3 ? argv[ 3 ] : "cat";
-
     output_t outputs[ 2 ];
 
     for ( int i = 0; i < 2; ++i )
         output_init( outputs + i );
 
-    outputs[ 0 ].cmd = out_cmd;
-    outputs[ 1 ].cmd = err_cmd;
+    int seps = 0;
+    for ( int i = 1; i < argc; i++ )
+        if ( strcmp( argv[ i ], "--" ) == 0 )
+        {
+            seps++;
+            break;
+        }
 
-    return wrap( cmd, outputs );
+    if ( seps )
+    {
+        int counts[ 3 ] = { 0 };
+        int current = 0;
+
+        for ( int i = 1; i < argc; i++ )
+        {
+            if ( strcmp( argv[ i ], "--" ) == 0 )
+            {
+                if ( i != 1 && current < 2 )
+                    current++;
+            }
+            else
+                counts[ current ]++;
+        }
+
+        char** args[ 3 ] = { 0 };
+        for ( int i = 0; i < 3; i++ )
+        {
+            if ( counts[ i ] == 0 )
+                counts[ i ] = 1;
+            args[ i ] = ( char** )malloc( ( 1 + counts[ i ] ) * sizeof( char** ) );
+            memset( args[ i ], 0, ( 1 + counts[ i ] ) * sizeof( char** ) );
+        }
+
+        int j = 0;
+        for ( int i = 1; i < argc; i++ )
+        {
+            if ( strcmp( argv[ i ], "--" ) == 0 )
+            {
+                if ( i != 1 && current < 2 )
+                {
+                    current++;
+                    j = 0;
+                }
+            }
+            else
+            {
+                args[ current ][ j ] = argv[ i ];
+                j++;
+            }
+        }
+
+        for ( int i = 0; i < 3; i++ )
+            args[ i ][ counts[ i ] ] = NULL;
+
+        prog_t prog;
+
+        char* cmd = argv[ 1 ];
+        // TODO: This is wrong. Command are now in args[ 0 ] and args[ 1 ]
+        char* out_cmd = argc > 2 ? argv[ 2 ] : "cat";
+        char* err_cmd = argc > 3 ? argv[ 3 ] : "cat";
+
+        prog.cmd = args[ 0 ][ 0 ];
+        prog.args = args[ 0 ];
+
+        out_cmd = args[ 1 ][ 0 ] ? args[ 1 ][ 0 ] : "cat";
+        err_cmd = args[ 2 ][ 0 ] ? args[ 2 ][ 0 ] : "cat";
+
+        outputs[ 0 ].prog.cmd = out_cmd;
+        outputs[ 1 ].prog.cmd = err_cmd;
+        outputs[ 0 ].prog.args = args[ 1 ];
+        outputs[ 1 ].prog.args = args[ 2 ];
+
+        for ( int i = 1; i < 3; i++ )
+            if ( counts[ i ] == 1 )
+                args[ i ][ 0 ] = i == 1 ? out_cmd : err_cmd;
+
+        print_args( prog );
+        print_args( outputs[ 0 ].prog );
+        print_args( outputs[ 1 ].prog );
+
+        return wrap( prog, outputs );
+    }
+    else
+    {
+        prog_t prog;
+        char* cmd = argv[ 1 ];
+        char* out_cmd = argc > 2 ? argv[ 2 ] : "cat";
+        char* err_cmd = argc > 3 ? argv[ 3 ] : "cat";
+
+        char* args[ 3 ][ 2 ] = { { cmd, NULL },
+                                 { out_cmd, NULL },
+                                 { err_cmd, NULL } };
+
+        prog.args = args[ 0 ];
+        prog.cmd = cmd;
+
+        outputs[ 0 ].prog.cmd = out_cmd;
+        outputs[ 1 ].prog.cmd = err_cmd;
+        outputs[ 0 ].prog.args = args[ 1 ];
+        outputs[ 1 ].prog.args = args[ 2 ];
+
+        print_args( prog );
+        print_args( outputs[ 0 ].prog );
+        print_args( outputs[ 1 ].prog );
+
+        return wrap( prog, outputs );
+    }
 }
