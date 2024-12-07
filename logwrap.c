@@ -7,7 +7,7 @@
 #include <time.h>       // clock_gettime
 
 #include <stdio.h>      // printf, dprintf, perror
-#include <stdlib.h>     // NULL, free, exit, strtod
+#include <stdlib.h>     // NULL, malloc, free, exit, strtod
 #include <string.h>     // memset, memcpy, strcmp
 #include <err.h>        // err
 
@@ -514,7 +514,12 @@ int main( int argc, char** argv )
     outputs[ 0 ].prog = progs[ 1 ];
     outputs[ 1 ].prog = progs[ 2 ];
 
-    return wrap( progs[ 0 ], outputs );
+    int rv = wrap( progs[ 0 ], outputs );
+
+    for ( int i = 0; i < 3; ++i )
+        free( progs[ i ].args );
+
+    return rv;
 }
 
 
@@ -599,6 +604,8 @@ void parse_args( int argc, char* const* argv, prog_t progs[ 3 ] )
         {
             progs[ i ].cmd = args[ i ];
             progs[ i ].args = malloc( 2 * sizeof( *progs[ i ].args ) );
+            if ( !progs[ i ].args )
+                perror( "malloc" ), exit( 101 );
             progs[ i ].args[ 0 ] = progs[ i ].cmd;
             progs[ i ].args[ 1 ] = NULL;
         }
