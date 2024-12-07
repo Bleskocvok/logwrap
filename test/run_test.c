@@ -103,12 +103,18 @@ end:
     return rv;
 }
 
+int test_case_advanced()
+{
+    return 0;
+}
+
 int main( void )
 {
     test_case_exit();
     test_case_exit_2();
 
     test_case_simple();
+    test_case_advanced();
 }
 
 void error( const char* str )

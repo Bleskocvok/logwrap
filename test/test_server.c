@@ -28,8 +28,10 @@ int echo( int in_fd, int out_fd )
     return 0;
 }
 
-int main( void )
+int main( int argc, char** argv )
 {
+    const char* filename = argc >= 2 ? argv[ 1 ] : INPUT_SOCKET;
+
     int rv = 1;
 
     int client = -1;
@@ -39,7 +41,7 @@ int main( void )
 
     struct sockaddr_un addr = { .sun_family = AF_UNIX, };
 
-    if ( snprintf( addr.sun_path, sizeof addr.sun_path, "%s", INPUT_SOCKET )
+    if ( snprintf( addr.sun_path, sizeof addr.sun_path, "%s", filename )
             >= ( int )sizeof addr.sun_path )
         return fprintf( stderr, "socket filename too long\n" );
 
@@ -74,6 +76,6 @@ int main( void )
 end:
     if ( client != -1 ) close( client );
     if ( sock_fd != -1 ) close( sock_fd );
-    unlink( INPUT_SOCKET );
+    unlink( filename );
     return rv;
 }

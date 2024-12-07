@@ -8,11 +8,13 @@
 
 #define OUTPUT_SOCKET "./dump"
 
-int main( void )
+int main( int argc, char** argv )
 {
+    const char* filename = argc >= 2 ? argv[ 1 ] : OUTPUT_SOCKET;
+
     struct sockaddr_un addr = { .sun_family = AF_UNIX, };
 
-    if ( snprintf( addr.sun_path, sizeof addr.sun_path, "%s", OUTPUT_SOCKET )
+    if ( snprintf( addr.sun_path, sizeof addr.sun_path, "%s", filename )
             >= ( int )sizeof addr.sun_path )
         return fprintf( stderr, "socket filename too long\n" );
 
