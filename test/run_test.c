@@ -38,10 +38,26 @@ void test_case_exit()
     assert( WEXITSTATUS( status ) == 1 );
 }
 
-int main( void )
+void test_case_exit_2()
 {
-    test_case_exit();
+    for ( int i = 0; i < 100; i++ )
+    {
+        char num_buf[ 128 ];
+        snprintf( num_buf, sizeof num_buf, "%d", i );
 
+        char* const argv[] = { PROG_PATH, "--", "./test_exit", num_buf, NULL };
+        pid_t pid = fork_exec( argv[ 0 ], argv );
+
+        int status;
+        assert( waitpid( pid, &status, 0 ) > 0 );
+
+        assert( WIFEXITED( status ) );
+        assert( WEXITSTATUS( status ) == i );
+    }
+}
+
+int test_case_simple()
+{
     int rv = 1;
 
     unlink( CMD_OUTPUT_SOCKET );
@@ -85,6 +101,14 @@ end:
     if ( out_fd != -1 ) close( out_fd );
     unlink( CMD_OUTPUT_SOCKET );
     return rv;
+}
+
+int main( void )
+{
+    test_case_exit();
+    test_case_exit_2();
+
+    test_case_simple();
 }
 
 void error( const char* str )
