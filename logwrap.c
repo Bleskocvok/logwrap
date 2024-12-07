@@ -514,10 +514,6 @@ int main( int argc, char** argv )
     outputs[ 0 ].prog = progs[ 1 ];
     outputs[ 1 ].prog = progs[ 2 ];
 
-    print_args( progs[ 0 ] );
-    print_args( progs[ 1 ] );
-    print_args( progs[ 2 ] );
-
     return wrap( progs[ 0 ], outputs );
 }
 
@@ -545,12 +541,11 @@ void parse_args( int argc, char* const* argv, prog_t progs[ 3 ] )
                     current++;
             }
             else
-                printf("counts[ %d ]++ for %s\n", current, argv[i]), counts[ current ]++;
+                counts[ current ]++;
         }
 
         for ( int i = 0; i < 3; i++ )
         {
-            printf( "counts[ %d ] → %d\n", i, counts[ i ] );
             if ( counts[ i ] == 0 )
                 counts[ i ] = 1;
 
@@ -576,9 +571,6 @@ void parse_args( int argc, char* const* argv, prog_t progs[ 3 ] )
             }
             else
             {
-                printf( "argv[ %d ] → %s\n", i, argv[ i ] );
-                printf( "counts[ %d ] → %d\n", i, counts[ current ] );
-                printf( "progs[ %d ].args[ %d ] = argv[ %d ] → %s\n", current, j, i, argv[ i ] );
                 progs[ current ].args[ j ] = argv[ i ];
                 j++;
             }
