@@ -6,7 +6,7 @@ logwrap: logwrap.o
 
 logwrap.o: logwrap.c
 
-test:
+test: logwrap
 	$(MAKE) -C test/
 	cd test && ./run_test
 

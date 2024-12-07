@@ -16,6 +16,7 @@
 
 #define CMD_OUTPUT_SOCKET   "./dump"
 #define SERVER_INPUT_SOCKET "./server_input"
+#define PROG_PATH "../logwrap"
 
 int start_server( const char* cmd_output_socket );
 int start_connection( const char* server_input );
@@ -25,8 +26,22 @@ void assert_get( int fd, const char* expected );
 void assert_timeout_get( int fd, int timeout_ms );
 pid_t fork_exec( const char* cmd, char* const* argv );
 
+void test_case_exit()
+{
+    char* const argv[] = { PROG_PATH, "--", "false", "1", NULL };
+    pid_t pid = fork_exec( argv[ 0 ], argv );
+
+    int status;
+    assert( waitpid( pid, &status, 0 ) > 0 );
+
+    assert( WIFEXITED( status ) );
+    assert( WEXITSTATUS( status ) == 1 );
+}
+
 int main( void )
 {
+    test_case_exit();
+
     int rv = 1;
 
     unlink( CMD_OUTPUT_SOCKET );
@@ -37,7 +52,7 @@ int main( void )
     if ( in_fd == -1 )
         goto end;
 
-    char* const argv[] = { "../logwrap", "./test_server", "./test_cmd", NULL };
+    char* const argv[] = { PROG_PATH, "./test_server", "./test_cmd", NULL };
     pid_t pid = fork_exec( argv[ 0 ], argv );
 
     out_fd = start_connection( SERVER_INPUT_SOCKET );
