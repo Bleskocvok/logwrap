@@ -28,6 +28,41 @@ int echo( int in_fd, int out_fd )
     return 0;
 }
 
+int start_server( const char* filename )
+{
+    struct sockaddr_un addr = { .sun_family = AF_UNIX, };
+
+    if ( snprintf( addr.sun_path, sizeof addr.sun_path, "%s", filename )
+            >= ( int )sizeof addr.sun_path )
+        return fprintf( stderr, "socket filename too long\n" ), -1;
+
+    if ( unlink( addr.sun_path ) == -1 && errno != ENOENT )
+    {
+        perror( "unlink" );
+        return -1;
+    }
+
+    int sock_fd = socket( AF_UNIX, SOCK_STREAM, 0 );
+    if ( sock_fd == -1 )
+        return perror( "socket" ), -1;
+
+    if ( bind( sock_fd, ( struct sockaddr* )&addr, sizeof addr ) == -1 )
+    {
+        perror( "bind" );
+        close( sock_fd );
+        return -1;
+    }
+
+    if ( listen( sock_fd, 5 ) == -1 )
+    {
+        perror( "listen" );
+        close( sock_fd );
+        return -1;
+    }
+
+    return sock_fd;
+}
+
 int main( int argc, char** argv )
 {
     const char* filename = argc >= 2 ? argv[ 1 ] : INPUT_SOCKET;
@@ -35,33 +70,9 @@ int main( int argc, char** argv )
     int rv = 1;
 
     int client = -1;
-    int sock_fd = socket( AF_UNIX, SOCK_STREAM, 0 );
+    int sock_fd = start_server( filename );
     if ( sock_fd == -1 )
-        return perror( "socket" ), 1;
-
-    struct sockaddr_un addr = { .sun_family = AF_UNIX, };
-
-    if ( snprintf( addr.sun_path, sizeof addr.sun_path, "%s", filename )
-            >= ( int )sizeof addr.sun_path )
-        return fprintf( stderr, "socket filename too long\n" );
-
-    if ( unlink( addr.sun_path ) == -1 && errno != ENOENT )
-    {
-        perror( "unlink" );
         goto end;
-    }
-
-    if ( bind( sock_fd, ( struct sockaddr* )&addr, sizeof addr ) == -1 )
-    {
-        perror( "bind" );
-        goto end;
-    }
-
-    if ( listen( sock_fd, 5 ) == -1 )
-    {
-        perror( "listen" );
-        goto end;
-    }
 
     client = accept( sock_fd, 0, 0 );
     if ( client == -1 )
