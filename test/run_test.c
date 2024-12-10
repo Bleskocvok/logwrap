@@ -14,16 +14,21 @@
 #include <assert.h>         // assert
 #include <string.h>         // memcmp, strerror, strlen
 
-#define CMD_OUTPUT_SOCKET   "./dump"
-#define SERVER_INPUT_SOCKET "./server_input"
 #define PROG_PATH "../logwrap"
+
+typedef struct
+{
+    int in;
+    int out;
+
+} link_t;
 
 int start_server( const char* cmd_output_socket );
 int start_connection( const char* server_input );
 void error( const char* str );
-void assert_put( int fd, const char* str );
-void assert_get( int fd, const char* expected );
-void assert_timeout_get( int fd, int timeout_ms );
+void assert_put( link_t lnk, const char* str );
+void assert_get( link_t lnk, const char* expected );
+void assert_timeout_get( link_t lnk, int timeout_ms );
 pid_t fork_exec( const char* cmd, char* const* argv );
 
 void test_case_exit()
@@ -60,33 +65,41 @@ int test_case_simple()
 {
     int rv = 1;
 
+     const char* CMD_OUTPUT_SOCKET = "./dump";
+     const char* SERVER_INPUT_SOCKET = "./server_input";
+
     unlink( CMD_OUTPUT_SOCKET );
     unlink( SERVER_INPUT_SOCKET );
 
-    int out_fd = -1;
-    int in_fd = start_server( CMD_OUTPUT_SOCKET );
-    if ( in_fd == -1 )
+    link_t out;
+    out.in = start_server( CMD_OUTPUT_SOCKET );
+    if ( out.in == -1 )
         goto end;
 
     char* const argv[] = { PROG_PATH, "./test_server", "./test_cmd", NULL };
     pid_t pid = fork_exec( argv[ 0 ], argv );
 
-    out_fd = start_connection( SERVER_INPUT_SOCKET );
+    out.out = start_connection( SERVER_INPUT_SOCKET );
 
-    assert_put( out_fd, "ahoj\n" );
-    assert_get( in_fd, "ahoj\n" );
+    assert_put( out, "ahoj\n" );
+    assert_get( out, "ahoj\n" );
 
-    assert_put( out_fd, "ooga booga\n");
-    assert_get( in_fd, "ooga booga\n" );
+    assert_put( out, "ooga booga\n");
+    assert_get( out, "ooga booga\n" );
+
+    assert_put( out, "aaa" );
+    assert_put( out, "bbb" );
+    assert_put( out, "ccc" );
+    assert_put( out, "\n" );
+    assert_get( out, "aaabbbccc\n" );
 
     // Closes the connection, so the ‹test_server› executable terminates
     // itself.
-    close( out_fd );
+    close( out.out );
+    out.out = -1;
 
     // We shouldn't get any extra output.
-    assert_timeout_get( in_fd, 1000 );
-
-    out_fd = -1;
+    assert_timeout_get( out, 1000 );
 
     int status;
     if ( waitpid( pid, &status, 0 ) == -1 )
@@ -97,15 +110,96 @@ int test_case_simple()
 
     rv = 0;
 end:
-    if ( in_fd != -1 ) close( in_fd );
-    if ( out_fd != -1 ) close( out_fd );
+    if ( out.in != -1 ) close( out.in );
+    if ( out.out != -1 ) close( out.out );
     unlink( CMD_OUTPUT_SOCKET );
     return rv;
 }
 
 int test_case_advanced()
 {
-    return 0;
+    int rv = 1;
+
+    char CMD_OUT[] = "./cmd_out";
+    char CMD_ERR[] = "./cmd_err";
+    char SERVER_OUT[] = "./server_out";
+    char SERVER_ERR[] = "./server_err";
+
+    unlink( CMD_OUT );
+    unlink( CMD_ERR );
+    unlink( SERVER_OUT );
+    unlink( SERVER_ERR );
+
+    link_t sout = { .in = -1, .out = -1, };
+    link_t ser = { .in = -1, .out = -1, };;
+
+    sout.in = start_server( CMD_OUT );
+    if ( sout.in == -1 ) goto end;
+
+    ser.in = start_server( CMD_ERR );
+    if ( ser.in == -1 ) goto end;
+
+    char* const argv[] = { PROG_PATH, "--", "./test_server", SERVER_OUT, SERVER_ERR,
+                           "--", "./test_cmd", CMD_OUT,
+                           "--", "./test_cmd", CMD_ERR,
+                           NULL };
+    pid_t pid = fork_exec( argv[ 0 ], argv );
+
+    sout.out = start_connection( SERVER_OUT );
+    ser.out = start_connection( SERVER_ERR );
+
+    assert_put( sout, "ahoj\n" );
+    assert_get( sout, "ahoj\n" );
+
+    assert_put( sout, "ooga booga\n");
+    assert_get( sout, "ooga booga\n" );
+
+    assert_put( sout, "aaa" );
+    assert_put( ser,  "ááá" );
+    assert_put( sout, "bbb" );
+    assert_put( ser,  "ččč" );
+    assert_put( sout, "ccc" );
+    assert_put( ser,  "ďďď" );
+    assert_put( sout, "\n" );
+    assert_get( sout, "aaabbbccc\n" );
+
+    assert_timeout_get( ser, 1000 );
+    assert_put( ser, "\n" );
+    assert_get( ser, "áááčččďďď\n" );
+
+    // Closes one connection.
+    close( sout.out );
+    sout.out = -1;
+
+    // We shouldn't get any extra output.
+    assert_timeout_get( sout, 1000 );
+
+    // Closes the other connection, so the ‹test_server› executable terminates
+    // itself.
+    close( ser.out );
+    ser.out = -1;
+
+    // We shouldn't get any extra error output either.
+    assert_timeout_get( ser, 1000 );
+
+    int status;
+    if ( waitpid( pid, &status, 0 ) == -1 )
+        goto end;
+
+    assert( WIFEXITED( status ) );
+    assert( WEXITSTATUS( status ) == 0 );
+
+    rv = 0;
+end:
+    if ( sout.in != -1 ) close( sout.in );
+    if ( sout.out != -1 ) close( sout.out );
+    if ( ser.in != -1 ) close( ser.in );
+    if ( ser.out != -1 ) close( ser.out );
+    unlink( CMD_OUT );
+    unlink( CMD_ERR );
+    unlink( SERVER_OUT );
+    unlink( SERVER_ERR );
+    return rv;
 }
 
 int main( void )
@@ -265,24 +359,24 @@ void print_escaped( const char* buf, int size )
     }
 }
 
-void assert_put( int fd, const char* str )
+void assert_put( link_t lnk, const char* str )
 {
-    assert( put( fd, str, strlen( str ) ) == 0 );
+    assert( put( lnk.out, str, strlen( str ) ) == 0 );
 }
 
-void assert_timeout_get( int fd, int timeout_ms )
+void assert_timeout_get( link_t lnk, int timeout_ms )
 {
     char buf[ 4096 ];
-    int got = get( fd, buf, sizeof buf, timeout_ms );
+    int got = get( lnk.in, buf, sizeof buf, timeout_ms );
     assert( got == -2 );
 }
 
-void assert_get( int fd, const char* expected )
+void assert_get( link_t lnk, const char* expected )
 {
     int size = strlen( expected );
 
     char buf[ 4096 ];
-    int got = get( fd, buf, sizeof buf, 5000 );
+    int got = get( lnk.in, buf, sizeof buf, 5000 );
     if ( got < 0 )
     {
         fprintf( stderr, "%s while waiting for: \"", got == -2 ? "timeout" : "error" );
