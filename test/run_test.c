@@ -151,8 +151,8 @@ int test_case_advanced()
     assert_put( sout, "ahoj\n" );
     assert_get( sout, "ahoj\n" );
 
-    assert_put( sout, "ooga booga\n");
-    assert_get( sout, "ooga booga\n" );
+    assert_put( ser, "ooga booga\n");
+    assert_get( ser, "ooga booga\n" );
 
     assert_put( sout, "aaa" );
     assert_put( ser,  "ááá" );
@@ -202,6 +202,128 @@ end:
     return rv;
 }
 
+void ms_sleep( int ms )
+{
+    int sec = ms / 1000;
+    int ms_ = ms % 1000;
+    struct timespec ts = { .tv_sec = sec, .tv_nsec = 1000 * 1000 * ms_ };
+    if ( nanosleep( &ts, NULL ) == -1 )
+    {
+        perror( "nanosleep" );
+        exit( 1 );
+    }
+}
+
+int test_case_timed( int detach )
+{
+    int rv = 1;
+
+    char CMD_OUT[] = "./cmd_out";
+    char CMD_ERR[] = "./cmd_err";
+    char SERVER_OUT[] = "./server_out";
+    char SERVER_ERR[] = "./server_err";
+
+    unlink( CMD_OUT );
+    unlink( CMD_ERR );
+    unlink( SERVER_OUT );
+    unlink( SERVER_ERR );
+
+    link_t sout = { .in = -1, .out = -1, };
+    link_t ser = { .in = -1, .out = -1, };;
+
+    sout.in = start_server( CMD_OUT );
+    if ( sout.in == -1 ) goto end;
+
+    ser.in = start_server( CMD_ERR );
+    if ( ser.in == -1 ) goto end;
+
+    char* argv[ 16 ] = { 0 };
+    if ( detach )
+    {
+        char* const args[] = { PROG_PATH, "-s", "1",
+                                          "--", "./test_server", SERVER_OUT, SERVER_ERR,
+                                          "--", "./test_cmd", CMD_OUT,
+                                          "--", "./test_cmd", CMD_ERR,
+                                          NULL, NULL };
+        memcpy( argv, args, sizeof args );
+    }
+    else
+    {
+        char* const args[] = { PROG_PATH, "-s", "1", "-d",
+                                          "--", "./test_server", SERVER_OUT, SERVER_ERR,
+                                          "--", "./test_cmd", CMD_OUT,
+                                          "--", "./test_cmd", CMD_ERR,
+                                          detach ? "-d" : NULL,
+                                          NULL };
+        memcpy( argv, args, sizeof args );
+    }
+    pid_t pid = fork_exec( argv[ 0 ], argv );
+
+    sout.out = start_connection( SERVER_OUT );
+    ser.out = start_connection( SERVER_ERR );
+
+    assert_put( sout, "ahoj\n" );
+    ms_sleep( 1000 );
+    assert_get( sout, "ahoj\n" );
+
+    assert_put( sout, "line1\n" );
+    assert_put( sout, "line2\n" );
+    assert_put( sout, "line3\n" );
+    assert_timeout_get( sout, 100 );
+
+    assert_get( sout, "line1\nline2\nline3\n" );
+    assert_timeout_get( sout, 1000 );
+
+    assert_put( sout, "line1\n" );
+    assert_put( sout, "line2\n" );
+    assert_put( sout, "line3\n" );
+    assert_put( ser, "EPIPE\n" );
+    assert_put( ser, "EAGAIN" );
+    assert_put( ser, " ECONNREFUSED\n" );
+    assert_put( ser, "ENOENT\n" );
+    assert_timeout_get( sout, 100 );
+    assert_timeout_get( ser, 100 );
+
+    assert_get( sout, "line1\nline2\nline3\n" );
+    assert_get( ser, "EPIPE\nEAGAIN ECONNREFUSED\nENOENT\n" );
+    assert_timeout_get( sout, 2000 );
+    assert_timeout_get( ser, 2000 );
+
+    // Closes one connection.
+    close( sout.out );
+    sout.out = -1;
+
+    // We shouldn't get any extra output.
+    assert_timeout_get( sout, 1000 );
+
+    // Closes the other connection, so the ‹test_server› executable terminates
+    // itself.
+    close( ser.out );
+    ser.out = -1;
+
+    // We shouldn't get any extra error output either.
+    assert_timeout_get( ser, 1000 );
+
+    int status;
+    if ( waitpid( pid, &status, 0 ) == -1 )
+        goto end;
+
+    assert( WIFEXITED( status ) );
+    assert( WEXITSTATUS( status ) == 0 );
+
+    rv = 0;
+end:
+    if ( sout.in != -1 ) close( sout.in );
+    if ( sout.out != -1 ) close( sout.out );
+    if ( ser.in != -1 ) close( ser.in );
+    if ( ser.out != -1 ) close( ser.out );
+    unlink( CMD_OUT );
+    unlink( CMD_ERR );
+    unlink( SERVER_OUT );
+    unlink( SERVER_ERR );
+    return rv;
+}
+
 int main( void )
 {
     test_case_exit();
@@ -209,6 +331,8 @@ int main( void )
 
     test_case_simple();
     test_case_advanced();
+    test_case_timed( 0 );
+    test_case_timed( 1 );
 }
 
 void error( const char* str )
