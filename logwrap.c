@@ -16,6 +16,7 @@ static int DELAY_MSEC = -1;
 static int DETACH = 0;
 static int JOIN = 0;
 static int PREFIX = 0;
+static int ENSURE_NEWLINE = 0;
 
 
 typedef struct buf_t
@@ -203,7 +204,7 @@ void output_flush( output_t* output, const char* str, int len )
 }
 
 
-void buf_flush( buf_t* b, output_t* output, const char* prefix )
+void buf_flush( buf_t* b, output_t* output, const char* prefix, int ignore_newline )
 {
     if ( buf_size( b ) == 0 )
         return;
@@ -214,11 +215,17 @@ void buf_flush( buf_t* b, output_t* output, const char* prefix )
         if ( b->data[ i ] == '\n' )
             end = i;
     }
+    if ( ignore_newline )
+        end = b->size;
 
     char str[ 2 * sizeof b->data ] = { 0 };
-    snprintf( str, sizeof str, "%s%.*s", prefix, ( int )sizeof b->data, b->data );
+    if ( b->data[ end - 1 ] == '\n' || !ENSURE_NEWLINE )
+        // Not sure what the reasoning was for ‹sizeof b->data› there.
+        // For ‹.*›, the number specifies the _maximum_ number of bytes, so it's okay.
+        snprintf( str, sizeof str, "%s%.*s", prefix, ( int )sizeof b->data, b->data );
+    else
+        snprintf( str, sizeof str, "%s%.*s\n", prefix, ( int )sizeof b->data, b->data );
 
-    // output_flush( output, b->data, end + 1 );
     output_flush( output, str, end + 1 + strlen( prefix ) );
 
     int new_size = b->size - end - 1;
@@ -245,7 +252,7 @@ void buf_try_flush( buf_t* b, output_t* o, int thresh_ms, const char* prefix )
                 + ( now.tv_nsec - b->time_begin.tv_nsec ) / 1e9;
     diff *= 1e3;
     if ( thresh_ms < 0 || diff >= thresh_ms )
-        buf_flush( b, o, prefix );
+        buf_flush( b, o, prefix, 0 );
 }
 
 
@@ -346,7 +353,7 @@ int parent( pid_t child, int fd_child_out, int fd_child_err, int* status,
 
             if ( ended || polled[ i ].fd == -1 )
             {
-                buf_flush( bufs[ i ], outs[ i ], prefs[ i ] );
+                buf_flush( bufs[ i ], outs[ i ], prefs[ i ], 1 );
                 polled[ i ].fd = -1;
             }
         }
@@ -366,7 +373,7 @@ int parent( pid_t child, int fd_child_out, int fd_child_err, int* status,
             continue;
 
         if ( buf_size( bufs[ i ] ) > 0 )
-            buf_flush( bufs[ i ], outs[ i ], prefs[ i ] );
+            buf_flush( bufs[ i ], outs[ i ], prefs[ i ], 1 );
     }
 
     close( fd_child_out );
@@ -430,6 +437,7 @@ void help()
             "  -j           join stdout and stderr\n"
             "  -d           detach executed cmd\n"
             "  -p           prefix \"stdout\" and \"stderr\"\n"
+            "  -n           add newline at the end of output if missing\n"
             );
 }
 
@@ -494,6 +502,10 @@ int main( int argc, char** argv )
         else if ( arg == 'p' )
         {
             PREFIX = 1;
+        }
+        else if ( arg == 'n' )
+        {
+            ENSURE_NEWLINE = 1;
         }
         else
             return usage( argv ), 1;

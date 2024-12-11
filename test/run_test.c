@@ -38,7 +38,6 @@ void test_case_exit()
 
     int status;
     assert( waitpid( pid, &status, 0 ) > 0 );
-
     assert( WIFEXITED( status ) );
     assert( WEXITSTATUS( status ) == 1 );
 }
@@ -55,7 +54,6 @@ void test_case_exit_2()
 
         int status;
         assert( waitpid( pid, &status, 0 ) > 0 );
-
         assert( WIFEXITED( status ) );
         assert( WEXITSTATUS( status ) == i );
     }
@@ -167,6 +165,8 @@ int test_case_advanced()
     assert_put( ser, "\n" );
     assert_get( ser, "áááčččďďď\n" );
 
+    assert_put( ser, "after konec no newline" );
+
     // Closes one connection.
     close( sout.out );
     sout.out = -1;
@@ -178,6 +178,9 @@ int test_case_advanced()
     // itself.
     close( ser.out );
     ser.out = -1;
+
+    assert_get( ser, "after konec no newline\n" );
+    // assert_get( ser, "after konec no newline" );
 
     // We shouldn't get any extra error output either.
     assert_timeout_get( ser, 1000 );
