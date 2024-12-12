@@ -6,10 +6,29 @@
 
 #include <stdio.h>          // perror, snprintf
 
+// debug
+#include <sys/stat.h>       // open
+#include <fcntl.h>          // open
+#include <unistd.h>         // dup2
+#include <stdio.h>          // dprintf
+#include <stdlib.h>         // getenv
+
 #define OUTPUT_SOCKET "./dump"
+
+void init_debug( const char* filename )
+{
+    if ( getenv( "LOGWRAP_DEBUG" ) == NULL )
+        return;
+    dup2( 1, 3 );
+    int f = open( filename, O_WRONLY | O_TRUNC | O_CREAT, 0666 );
+    dup2( f, 3 );
+    close( f );
+}
 
 int main( int argc, char** argv )
 {
+    init_debug( "debug_cmd" );
+
     const char* filename = argc >= 2 ? argv[ 1 ] : OUTPUT_SOCKET;
 
     struct sockaddr_un addr = { .sun_family = AF_UNIX, };
@@ -33,6 +52,7 @@ int main( int argc, char** argv )
     // Echo input from stdin to the socket.
     while ( ( bytes = read( 0, buf, sizeof buf ) ) > 0 )
     {
+        dprintf( 3, "cmd: read \"%.*s\"\n", bytes, buf );
         int r = write( sock_fd, buf, bytes );
         if ( r == -1 )
             return perror( "write" ), 1;

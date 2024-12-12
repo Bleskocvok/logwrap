@@ -5,10 +5,27 @@
 #include <unistd.h>         // close, read, write
 #include <poll.h>           // poll
 
+// debug
+#include <sys/stat.h>       // open
+#include <fcntl.h>          // open
+#include <unistd.h>         // dup2
+#include <stdio.h>          // dprintf
+#include <stdlib.h>         // getenv
+
 #include <stdio.h>          // perror
 #include <errno.h>          // errno
 
 #define INPUT_SOCKET "./server_input"
+
+void init_debug( const char* filename )
+{
+    if ( getenv( "LOGWRAP_DEBUG" ) == NULL )
+        return;
+    dup2( 1, 3 );
+    int f = open( filename, O_WRONLY | O_TRUNC | O_CREAT, 0666 );
+    dup2( f, 3 );
+    close( f );
+}
 
 int echo( int in_fd, int out_fd )
 {
@@ -16,6 +33,7 @@ int echo( int in_fd, int out_fd )
     int bytes;
     if ( ( bytes = read( in_fd, buf, sizeof buf ) ) > 0 )
     {
+        dprintf( 3, "server: read \"%.*s\"\n", bytes, buf );
         int r = write( out_fd, buf, bytes );
         if ( r == -1 )
             return perror( "write" ), -1;
@@ -66,11 +84,12 @@ int start_server( const char* filename )
 
 int main( int argc, char** argv )
 {
+    init_debug( "debug_server" );
+
     const char* filenames[] = { INPUT_SOCKET, NULL };
     for ( int i = 0; i < 2; i++ )
         if ( argc >= i + 2 )
             filenames[ i ] = argv[ i + 1 ];
-
 
     int rv = 1;
 
