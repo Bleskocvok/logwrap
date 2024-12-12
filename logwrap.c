@@ -213,24 +213,30 @@ void buf_flush( buf_t* b, output_t* output, const char* prefix, int ignore_newli
     for ( unsigned i = 0; i < b->size; ++i )
     {
         if ( b->data[ i ] == '\n' )
-            end = i;
+            end = i + 1;
     }
     if ( ignore_newline )
         end = b->size;
 
     char str[ 2 * sizeof b->data ] = { 0 };
     if ( b->data[ end - 1 ] == '\n' || !ENSURE_NEWLINE )
+    {
         // Not sure what the reasoning was for ‹sizeof b->data› there.
         // For ‹.*›, the number specifies the _maximum_ number of bytes, so it's okay.
         snprintf( str, sizeof str, "%s%.*s", prefix, ( int )sizeof b->data, b->data );
+    }
     else
+    {
         snprintf( str, sizeof str, "%s%.*s\n", prefix, ( int )sizeof b->data, b->data );
+        // For the added newline.
+        end++;
+    }
 
-    output_flush( output, str, end + 1 + strlen( prefix ) );
+    output_flush( output, str, end + strlen( prefix ) );
 
-    int new_size = b->size - end - 1;
-    if ( end + 1 < b->size )
-        memmove( b->data, b->data + end + 1, new_size );
+    int new_size = b->size - end;
+    if ( end < b->size )
+        memmove( b->data, b->data + end, new_size );
 
     b->size = new_size;
     b->time_begin = b->time_unfinished;
