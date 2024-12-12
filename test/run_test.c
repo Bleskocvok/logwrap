@@ -193,12 +193,14 @@ int test_case_advanced( int ensure_newline )
     assert_get( sout, "ahoj\n" );
 
     assert_put( ser, "ooga booga\n");
-    assert_get( ser, "ooga booga\n" );
 
     assert_put( sout, "aaa" );
     assert_put( ser,  "ááá" );
     assert_put( sout, "bbb" );
     assert_put( ser,  "ččč" );
+
+    assert_get( ser, "ooga booga\n" );
+
     assert_put( sout, "ccc" );
     assert_put( ser,  "ďďď" );
     assert_put( sout, "\n" );
