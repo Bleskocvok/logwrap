@@ -187,7 +187,6 @@ int fork_exec_out( prog_t prog, const char* output, int length );
 
 void output_flush_cmd( output_t* output, const char* str, int len )
 {
-    printf("outputting: \"%.*s\"\n", len, str);
     if ( DETACH )
     {
         pid_t pid = fork();
@@ -219,20 +218,15 @@ void buf_flush( buf_t* b, output_t* output, const char* prefix, int ignore_newli
     if ( ignore_newline )
         end = b->size;
 
-printf("c[%d]: '%c'\n", end, b->data[end-1]);
-
-    int size = ( int )sizeof b->data;
-    if ( b->size < size ) size = b->size;
+    // This is to ensure that no data outside the buffer is read. The stored
+    // string doesn't have to have a terminating null.
+    unsigned size = sizeof b->data;
+    if ( b->size < size )
+        size = b->size;
 
     char str[ 2 * sizeof b->data ] = { 0 };
     if ( b->data[ end - 1 ] == '\n' || !ENSURE_NEWLINE )
     {
-        printf("A\n");
-        // Not sure what the reasoning was for ‹sizeof b->data› there.
-        // For ‹.*›, the number specifies the _maximum_ number of bytes, so it's okay.
-        // EDIT: The reasoning is that ‹b->data› doesn't have to have the
-        // terminating null. This way, we can store a string of size equal to
-        // ‹sizeof b->data›.
         snprintf( str, sizeof str, "%s%.*s", prefix, size, b->data );
     }
     else
@@ -241,9 +235,6 @@ printf("c[%d]: '%c'\n", end, b->data[end-1]);
         // For the added newline.
         end++;
     }
-
-    printf("str(%d) \"%s\"\n", end, str);
-    printf("str(%d) \"%.*s\"\n", end, end, str);
 
     output_flush_cmd( output, str, end + strlen( prefix ) );
 
