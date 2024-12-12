@@ -12,7 +12,7 @@
 #include <errno.h>          // errno
 #include <stdlib.h>         // exit, NULL
 #include <assert.h>         // assert
-#include <string.h>         // memcmp, strerror, strlen
+#include <string.h>         // memcmp, strerror, strlen, memset
 
 #define PROG_PATH "../logwrap"
 
@@ -23,17 +23,45 @@ typedef struct
 
 } link_t;
 
+typedef struct
+{
+    const char* data[ 64 ];
+    int size;
+
+} args_t;
+
 int start_server( const char* cmd_output_socket );
 int start_connection( const char* server_input );
 void error( const char* str );
 void assert_put( link_t lnk, const char* str );
 void assert_get( link_t lnk, const char* expected );
 void assert_timeout_get( link_t lnk, int timeout_ms );
-pid_t fork_exec( const char* cmd, char* const* argv );
+pid_t fork_exec( const char* cmd, const char* argv[] );
+
+args_t new_args()
+{
+    args_t args;
+    memset( args.data, 0, sizeof args.data );
+    args.size = 0;
+    return args;
+}
+
+void args_push( args_t* args, const char* arg )
+{
+    if ( args->size + 1 >= ( int )( sizeof args->data / sizeof *args->data ) )
+        assert( 0 );
+    args->data[ args->size++ ] = arg;
+}
+
+void args_append( args_t* args, const char* elems[], int size )
+{
+    for ( int i = 0; i < size; i++ )
+        args_push( args, elems[ i ] );
+}
 
 void test_case_exit()
 {
-    char* const argv[] = { PROG_PATH, "--", "false", "1", NULL };
+    const char* argv[] = { PROG_PATH, "--", "false", "1", NULL };
     pid_t pid = fork_exec( argv[ 0 ], argv );
 
     int status;
@@ -49,7 +77,7 @@ void test_case_exit_2()
         char num_buf[ 128 ];
         snprintf( num_buf, sizeof num_buf, "%d", i );
 
-        char* const argv[] = { PROG_PATH, "--", "./test_exit", num_buf, NULL };
+        const char* argv[] = { PROG_PATH, "--", "./test_exit", num_buf, NULL };
         pid_t pid = fork_exec( argv[ 0 ], argv );
 
         int status;
@@ -63,8 +91,8 @@ int test_case_simple()
 {
     int rv = 1;
 
-     const char* CMD_OUTPUT_SOCKET = "./dump";
-     const char* SERVER_INPUT_SOCKET = "./server_input";
+    const char* CMD_OUTPUT_SOCKET = "./dump";
+    const char* SERVER_INPUT_SOCKET = "./server_input";
 
     unlink( CMD_OUTPUT_SOCKET );
     unlink( SERVER_INPUT_SOCKET );
@@ -74,7 +102,7 @@ int test_case_simple()
     if ( out.in == -1 )
         goto end;
 
-    char* const argv[] = { PROG_PATH, "./test_server", "./test_cmd", NULL };
+    const char* argv[] = { PROG_PATH, "./test_server", "./test_cmd", NULL };
     pid_t pid = fork_exec( argv[ 0 ], argv );
 
     out.out = start_connection( SERVER_INPUT_SOCKET );
@@ -114,7 +142,7 @@ end:
     return rv;
 }
 
-int test_case_advanced()
+int test_case_advanced( int ensure_newline )
 {
     int rv = 1;
 
@@ -137,11 +165,26 @@ int test_case_advanced()
     ser.in = start_server( CMD_ERR );
     if ( ser.in == -1 ) goto end;
 
-    char* const argv[] = { PROG_PATH, "--", "./test_server", SERVER_OUT, SERVER_ERR,
-                           "--", "./test_cmd", CMD_OUT,
-                           "--", "./test_cmd", CMD_ERR,
-                           NULL };
-    pid_t pid = fork_exec( argv[ 0 ], argv );
+    // char* const argv[] = { PROG_PATH, "--", "./test_server", SERVER_OUT, SERVER_ERR,
+    //                        "--", "./test_cmd", CMD_OUT,
+    //                        "--", "./test_cmd", CMD_ERR,
+    //                        NULL };
+    args_t args = new_args();
+    args_push( &args, PROG_PATH );
+    if ( ensure_newline )
+        args_push( &args, "-n" );
+    args_push( &args, "--" );
+    args_push( &args, "./test_server" );
+    args_push( &args, SERVER_OUT );
+    args_push( &args, SERVER_ERR );
+    args_push( &args, "--" );
+    args_push( &args, "./test_cmd" );
+    args_push( &args, CMD_OUT );
+    args_push( &args, "--" );
+    args_push( &args, "./test_cmd" );
+    args_push( &args, CMD_ERR );
+
+    pid_t pid = fork_exec( args.data[ 0 ], args.data );
 
     sout.out = start_connection( SERVER_OUT );
     ser.out = start_connection( SERVER_ERR );
@@ -179,8 +222,10 @@ int test_case_advanced()
     close( ser.out );
     ser.out = -1;
 
-    assert_get( ser, "after konec no newline\n" );
-    // assert_get( ser, "after konec no newline" );
+    if ( ensure_newline )
+        assert_get( ser, "after konec no newline\n" );
+    else
+        assert_get( ser, "after konec no newline" );
 
     // We shouldn't get any extra error output either.
     assert_timeout_get( ser, 1000 );
@@ -240,10 +285,10 @@ int test_case_timed( int detach )
     ser.in = start_server( CMD_ERR );
     if ( ser.in == -1 ) goto end;
 
-    char* argv[ 16 ] = { 0 };
+    const char* argv[ 16 ] = { 0 };
     if ( detach )
     {
-        char* const args[] = { PROG_PATH, "-s", "1",
+        const char* args[] = { PROG_PATH, "-s", "1",
                                           "--", "./test_server", SERVER_OUT, SERVER_ERR,
                                           "--", "./test_cmd", CMD_OUT,
                                           "--", "./test_cmd", CMD_ERR,
@@ -252,7 +297,7 @@ int test_case_timed( int detach )
     }
     else
     {
-        char* const args[] = { PROG_PATH, "-s", "1", "-d",
+        const char* args[] = { PROG_PATH, "-s", "1", "-d",
                                           "--", "./test_server", SERVER_OUT, SERVER_ERR,
                                           "--", "./test_cmd", CMD_OUT,
                                           "--", "./test_cmd", CMD_ERR,
@@ -333,7 +378,8 @@ int main( void )
     test_case_exit_2();
 
     test_case_simple();
-    test_case_advanced();
+    test_case_advanced( 0 );
+    test_case_advanced( 1 );
     test_case_timed( 0 );
     test_case_timed( 1 );
 }
@@ -461,13 +507,13 @@ int start_connection( const char* server_input )
     return sock_fd;
 }
 
-pid_t fork_exec( const char* cmd, char* const* argv )
+pid_t fork_exec( const char* cmd, const char* argv[] )
 {
     pid_t pid = fork();
 
     if ( pid == 0 )
     {
-        execv( cmd, argv );
+        execv( cmd, ( char* const* )argv );
         perror( "execv" );
         exit( 200 );
     }
@@ -519,8 +565,8 @@ void assert_get( link_t lnk, const char* expected )
         if ( got > ( int )sizeof buf )
             got = sizeof buf;
 
-        fprintf( stderr, "got:      \"" ); print_escaped( buf, got );       fprintf( stderr, "\"\n" );
-        fprintf( stderr, "expected: \"" ); print_escaped( expected, size ); fprintf( stderr, "\"\n" );
+        fprintf( stderr, "got (%d):      \"", got ); print_escaped( buf, got );       fprintf( stderr, "\"\n" );
+        fprintf( stderr, "expected (%d): \"", size ); print_escaped( expected, size ); fprintf( stderr, "\"\n" );
         exit( 1 );
     }
 }
