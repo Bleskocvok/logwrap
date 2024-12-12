@@ -9,7 +9,7 @@
 #include <stdio.h>      // printf, dprintf, perror
 #include <stdlib.h>     // NULL, malloc, free, exit, strtod
 #include <string.h>     // memset, memcpy, strcmp
-#include <err.h>        // err
+#include <signal.h>     // signal
 
 
 static int DELAY_MSEC = -1;
@@ -192,6 +192,8 @@ void output_flush_cmd( output_t* output, const char* str, int len )
         pid_t pid = fork();
         if ( pid != -1 )
         {
+            // Note: double ‹fork› is used because of blocking ‹write›. It runs
+            // in a child process whose child is ‹exec›ing.
             if ( pid == 0 )
                 exit( fork_exec_out( output->prog, str, len ) == -1 ? 1 : 0 );
             pid_vec_push( &output->pids, pid );
@@ -564,6 +566,10 @@ int main( int argc, char** argv )
 
     outputs[ 0 ].prog = progs[ 1 ];
     outputs[ 1 ].prog = progs[ 2 ];
+
+    // Avoid ‹write› from this process being able to kill the whole thing.
+    if ( signal( SIGPIPE, SIG_IGN ) == SIG_ERR )
+        perror( "signal" );
 
     int rv = wrap( progs[ 0 ], outputs );
 
