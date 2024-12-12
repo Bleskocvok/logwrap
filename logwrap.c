@@ -270,6 +270,18 @@ void buf_try_flush( buf_t* b, output_t* o, int thresh_ms, const char* prefix )
 }
 
 
+int buf_elapsed_ms( buf_t* b, struct timespec now )
+{
+    if ( !b->newline_present || b->size == 0 )
+        return -1;
+
+    double diff =   now.tv_sec  - b->time_begin.tv_sec
+                + ( now.tv_nsec - b->time_begin.tv_nsec ) / 1e9;
+    diff *= 1e3;
+    return diff;
+}
+
+
 int fork_exec_out( prog_t prog, const char* output, int length )
 {
     int p_out[ 2 ];
@@ -343,9 +355,22 @@ int parent( pid_t child, int fd_child_out, int fd_child_err, int* status,
 
     while ( polled[ 0 ].fd != -1 || polled[ 1 ].fd != -1 )
     {
-        // TODO: Calculate as the lower value from time remaining.
-        // 0.2 sec timeout.
-        int p = poll( polled, 2, 200 );
+        // TODO: Refactor this whole chunk.
+        // At least 1s timeout.
+        int wait_ms = 1000;
+        if ( DELAY_MSEC > 0 )
+        {
+            struct timespec now = get_time();
+            int a = buf_elapsed_ms( bufs[ 0 ], now );
+            int b = buf_elapsed_ms( bufs[ 1 ], now );
+            a = a < 0 ? wait_ms : DELAY_MSEC - a;
+            b = b < 0 ? wait_ms : DELAY_MSEC - b;
+#define wmin( a, b ) ( ( a ) < ( b ) ? ( a ) : ( b ) )
+            wait_ms = wmin( wait_ms, wmin( a, b ) );
+#undef wmin
+        }
+
+        int p = poll( polled, 2, wait_ms );
         if ( p == -1 ) perror( "polling" );
 
         for ( int i = 0; i < 2; i++ )
