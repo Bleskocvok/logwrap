@@ -15,4 +15,5 @@ jobs:
     runs-on: ubuntu-latest
     needs: run-build
     steps:
+      - uses: actions/cache@main
       - run: make test
