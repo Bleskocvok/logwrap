@@ -4,3 +4,4 @@
 /test/test_server
 /test/test_cmd
 /test/test_exit
+/test/test_signal

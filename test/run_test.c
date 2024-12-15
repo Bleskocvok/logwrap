@@ -37,6 +37,7 @@ void assert_put( link_t lnk, const char* str );
 void assert_get( link_t lnk, const char* expected );
 void assert_timeout_get( link_t lnk, int timeout_ms );
 pid_t fork_exec( const char* cmd, const char* argv[] );
+void ms_sleep( int ms );
 
 args_t new_args()
 {
@@ -86,6 +87,27 @@ void test_case_exit_2()
         assert( WEXITSTATUS( status ) == i );
     }
 }
+
+void test_case_signal()
+{
+    int sigs[] = { SIGKILL, SIGTERM, SIGINT, SIGPIPE };
+    for ( int i = 0; i < 3; i++ )
+    {
+        int sig = sigs[ i ];
+
+        char str[ 12 ] = { 0 };
+        snprintf( str, sizeof str, "%d", sig );
+
+        const char* argv[] = { PROG_PATH, "--", "./test_signal", str, NULL };
+        pid_t pid = fork_exec( argv[ 0 ], argv );
+
+        int status;
+        assert( waitpid( pid, &status, 0 ) > 0 );
+        assert( WIFEXITED( status ) );
+        assert( WEXITSTATUS( status ) == 100 + sig );
+    }
+}
+
 
 int test_case_simple()
 {
@@ -378,6 +400,8 @@ int main( void )
 {
     test_case_exit();
     test_case_exit_2();
+
+    test_case_signal();
 
     test_case_simple();
     test_case_advanced( 0 );
