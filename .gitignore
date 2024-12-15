@@ -1,2 +1,6 @@
 /logwrap
 /logwrap.o
+/test/run_test
+/test/test_server
+/test/test_cmd
+/test/test_exit
