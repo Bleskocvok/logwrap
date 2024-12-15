@@ -450,9 +450,7 @@ int wrap( prog_t prog, output_t outputs[ 2 ] )
         if ( r != -1 )
         {
             if ( WIFEXITED( status ) ) return WEXITSTATUS( status );
-            // TODO: Probably return something like 100 + sig.
-            if ( WIFSIGNALED( status ) ) return 1;
-                // return printf( "signal %d\n", WTERMSIG( status ) ), 1;
+            if ( WIFSIGNALED( status ) ) return 100 + WTERMSIG( status );
         }
         return r == -1 ? 1 : 0;
     }
