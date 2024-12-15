@@ -1,3 +1,3 @@
 # logwrap
 
-![test and build badge](https://github.com/Bleskocvok/teaman/actions/workflows/hello-world.yml/badge.svg)
+![test and build badge](https://github.com/Bleskocvok/logwrap/actions/workflows/build-test.yml/badge.svg)
