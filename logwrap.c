@@ -565,7 +565,7 @@ int main( int argc, char** argv )
     outputs[ 0 ].prog = progs[ 1 ];
     outputs[ 1 ].prog = progs[ 2 ];
 
-    // Avoid ‹write› from this process being able to kill the whole thing.
+    // Prevent ‹write› in this process from being able to kill the whole thing.
     if ( signal( SIGPIPE, SIG_IGN ) == SIG_ERR )
         perror( "signal" );
 
