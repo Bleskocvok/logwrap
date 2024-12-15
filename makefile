@@ -8,7 +8,7 @@ logwrap.o: logwrap.c
 
 test: logwrap
 	$(MAKE) -C test/
-	cd test && ./run_test
+	cd test && time -p ./run_test
 
 clean:
 	$(MAKE) -C test/ clean
