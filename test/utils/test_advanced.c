@@ -14,10 +14,10 @@ int test_case_advanced( int ensure_newline )
 {
     int rv = 1;
 
-    char CMD_OUT[] = "./advanced_cmd_out_0";
-    char CMD_ERR[] = "./advanced_cmd_err_0";
-    char SERVER_OUT[] = "./advanced_server_out_0";
-    char SERVER_ERR[] = "./advanced_server_err_0";
+    char CMD_OUT[] = "./socket_advanced_cmd_out_0";
+    char CMD_ERR[] = "./socket_advanced_cmd_err_0";
+    char SERVER_OUT[] = "./socket_advanced_server_out_0";
+    char SERVER_ERR[] = "./socket_advanced_server_err_0";
 
     if ( ensure_newline )
     {

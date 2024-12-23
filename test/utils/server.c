@@ -15,7 +15,7 @@
 #include <stdio.h>          // perror
 #include <errno.h>          // errno
 
-#define INPUT_SOCKET "./server_input"
+#define INPUT_SOCKET "./socket_server_input"
 
 void init_debug( const char* filename )
 {

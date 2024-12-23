@@ -14,8 +14,8 @@ int test_case_simple()
 {
     int rv = 1;
 
-    const char* CMD_OUTPUT_SOCKET = "./dump";
-    const char* SERVER_INPUT_SOCKET = "./server_input";
+    const char* CMD_OUTPUT_SOCKET = "./socket_dump";
+    const char* SERVER_INPUT_SOCKET = "./socket_server_input";
 
     unlink( CMD_OUTPUT_SOCKET );
     unlink( SERVER_INPUT_SOCKET );

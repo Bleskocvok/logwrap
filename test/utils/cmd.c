@@ -15,7 +15,7 @@
 #include <errno.h>          // errno
 #include <string.h>         // strerror
 
-#define OUTPUT_SOCKET "./dump"
+#define OUTPUT_SOCKET "./socket_dump"
 
 void init_debug( char filename[] )
 {

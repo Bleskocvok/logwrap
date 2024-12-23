@@ -14,10 +14,10 @@ int test_case_timed( int detach )
 {
     int rv = 1;
 
-    char CMD_OUT[] = "./timed_cmd_out_0";
-    char CMD_ERR[] = "./timed_cmd_err_0";
-    char SERVER_OUT[] = "./timed_server_out_0";
-    char SERVER_ERR[] = "./timed_server_err_0";
+    char CMD_OUT[] = "./socket_timed_cmd_out_0";
+    char CMD_ERR[] = "./socket_timed_cmd_err_0";
+    char SERVER_OUT[] = "./socket_timed_server_out_0";
+    char SERVER_ERR[] = "./socket_timed_server_err_0";
 
     if ( detach )
     {
