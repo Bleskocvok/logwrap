@@ -17,14 +17,12 @@
 
 #define OUTPUT_SOCKET "./dump"
 
-void init_debug( const char* filename )
+void init_debug( char filename[] )
 {
     if ( getenv( "LOGWRAP_DEBUG" ) == NULL )
         return;
     dup2( 1, 3 );
-    // int f = open( filename, O_WRONLY | O_TRUNC | O_CREAT, 0666 );
-    char file[] = "debug_cmd_XXXXXX";
-    int f = mkstemp( file );
+    int f = mkstemp( filename );
     dup2( f, 3 );
     close( f );
 }
@@ -39,7 +37,7 @@ void cerror( const char* str )
 
 int main( int argc, char** argv )
 {
-    init_debug( "debug_cmd" );
+    init_debug( "debug_cmd_XXXXXX" );
 
     const char* filename = argc >= 2 ? argv[ 1 ] : OUTPUT_SOCKET;
 
