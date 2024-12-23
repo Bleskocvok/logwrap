@@ -496,6 +496,7 @@ int wrap( prog_t prog, output_t outputs[ 2 ] )
     close( p_err[ 1 ] );
 
     execvp( prog.cmd, prog.args );
+    fprintf( stderr, "exec( %s )\n", prog.cmd );
     perror( "exec" ), exit( 100 );
 }
 
