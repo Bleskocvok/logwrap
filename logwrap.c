@@ -452,6 +452,9 @@ int parent( pid_t child, int fd_child_out, int fd_child_err, int* status,
     close( fd_child_out );
     close( fd_child_err );
 
+    buf_free( bufs[ 0 ] );
+    buf_free( bufs[ 1 ] );
+
     if ( waitpid( child, status, 0 ) == -1 )
         return perror( "waitpid" ), -1;
     return 0;
