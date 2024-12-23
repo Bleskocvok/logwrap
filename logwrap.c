@@ -21,9 +21,10 @@ static int ENSURE_NEWLINE = 0;
 
 typedef struct buf_t
 {
-    // TODO: Don't set a hard limit on how much data can be temporarily stored.
-    char data[ 1024 ];
+    char* data;
+    char* aux_data;
     unsigned int size;
+    unsigned int cap;
 
     struct timespec time_begin;
     struct timespec time_unfinished;
@@ -137,19 +138,52 @@ void output_init( output_t* o )
 }
 
 
+unsigned buf_aux_size( const buf_t* b )
+{
+    return b->cap * 2;
+}
+
+
 void buf_init( buf_t* b )
 {
     memset( b, 0, sizeof( buf_t ) );
     b->time_begin      = get_time();
     b->time_unfinished = b->time_begin;
     b->time_last       = b->time_begin;
+
+    b->size = 0;
+    b->cap = 256;
+    if ( !( b->data = malloc( b->cap ) )
+      || !( b->aux_data = malloc( 2 * b->cap ) ) )
+        perror( "malloc" ), exit( 1 );
+}
+
+
+void buf_free( buf_t* b )
+{
+    free( b->data );
+    free( b->aux_data );
 }
 
 
 void buf_push( buf_t* b, char c )
 {
-    if ( b->size >= sizeof b->data )
-        return;
+    if ( b->size + 1 >= b->cap )
+    {
+        void* ptr = NULL;
+        void* aux_ptr = NULL;
+        if ( !( ptr = realloc( b->data, 2 * b->cap ) )
+          || !( aux_ptr = realloc( b->aux_data, 4 * b->cap ) ) )
+        {
+            free( ptr );
+            free( aux_ptr );
+            perror( "realloc" );
+            return;
+        }
+        b->data = ptr;
+        b->aux_data = aux_ptr;
+        b->cap *= 2;
+    }
 
     b->data[ b->size ] = c;
     ++b->size;
@@ -178,7 +212,6 @@ void buf_append( buf_t* b, const char* str, int len )
 }
 
 
-int buf_is_full( const buf_t* b ) { return b->size >= sizeof( b->data ); }
 int buf_size( const buf_t* b ) { return b->size; }
 
 
@@ -222,30 +255,29 @@ void buf_flush( buf_t* b, output_t* output, const char* prefix, int ignore_newli
 
     // This is to ensure that no data outside the buffer is read. The stored
     // string doesn't have to have a terminating null.
-    unsigned size = sizeof b->data;
+    unsigned size = b->cap;
     if ( b->size < size )
         size = b->size;
 
-    char str[ 2 * sizeof b->data ] = { 0 };
     if ( b->data[ end - 1 ] == '\n' || !ENSURE_NEWLINE )
     {
-        snprintf( str, sizeof str, "%s%.*s", prefix, size, b->data );
+        snprintf( b->aux_data, buf_aux_size( b ), "%s%.*s", prefix, size, b->data );
     }
     else
     {
-        snprintf( str, sizeof str, "%s%.*s\n", prefix, size, b->data );
+        snprintf( b->aux_data, buf_aux_size( b ), "%s%.*s\n", prefix, size, b->data );
         // For the added newline.
         end++;
     }
 
-    output_flush_cmd( output, str, end + strlen( prefix ) );
+    output_flush_cmd( output, b->aux_data, end + strlen( prefix ) );
 
     int new_size = b->size - end;
     if ( end < b->size )
         memmove( b->data, b->data + end, new_size );
 
     // Not necessary, but can help with debugging.
-    if ( new_size < ( int )sizeof b->data)
+    if ( new_size < ( int )b->cap )
         b->data[ new_size ] = 0;
 
     b->size = new_size;
@@ -320,7 +352,7 @@ int fork_exec_out( prog_t prog, const char* output, int length )
 
 int process( int fd, buf_t* buf )
 {
-    char tmp[ sizeof buf->data ] = { 0 };
+    char tmp[ 256 ] = { 0 };
 
     int bytes;
     if ( ( bytes = read( fd, tmp, sizeof tmp ) ) == -1 )
