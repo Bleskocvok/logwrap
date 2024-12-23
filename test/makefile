@@ -16,10 +16,14 @@ test_timed:            utils/utils.c utils/test_timed.c
 test_timed_detach:     utils/utils.c utils/test_timed.c
 test_long:             utils/utils.c
 
-server: utils/server.c
-cmd: utils/cmd.c
-exit: utils/exit.c
-signal: utils/signal.c
+utils/server: utils/server.c
+utils/cmd: utils/cmd.c
+utils/exit: utils/exit.c
+utils/signal: utils/signal.c
+
+tests: utils $(TESTS)
+
+utils: $(UTILS)
 
 run.%: %
 	./$*
@@ -35,4 +39,4 @@ clean:
 distclean: clean
 	$(RM) run_test $(UTILS) $(TESTS)
 
-.PHONY: all clean distclean run_test
+.PHONY: all clean distclean run_test tests utils
