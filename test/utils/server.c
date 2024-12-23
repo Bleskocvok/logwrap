@@ -33,7 +33,7 @@ int echo( int in_fd, int out_fd )
     int bytes;
     if ( ( bytes = read( in_fd, buf, sizeof buf ) ) > 0 )
     {
-        dprintf( 3, "server: read \"%.*s\"\n", bytes, buf );
+        dprintf( 3, "server: read(%d -> %d) \"%.*s\"\n", in_fd, out_fd, bytes, buf );
         int r = write( out_fd, buf, bytes );
         if ( r == -1 )
             return perror( "write" ), -1;

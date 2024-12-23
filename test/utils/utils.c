@@ -12,7 +12,7 @@
 
 #include <stdio.h>          // perror
 #include <errno.h>          // errno
-#include <stdlib.h>         // exit, NULL
+#include <stdlib.h>         // exit, NULL, malloc
 #include <assert.h>         // assert
 #include <string.h>         // memcmp, strerror, strlen, memset
 
@@ -63,8 +63,14 @@ int poll_read_fd( int fd, int timeout_ms )
 
 int get( int sock_fd, char* buf, int size, int timeout_ms )
 {
-    if ( poll_read_fd( sock_fd, timeout_ms) != 1 )
-        return -2;
+    int p;
+    if ( ( p = poll_read_fd( sock_fd, timeout_ms) ) != 1 )
+    {
+        if ( p < 0 )
+            return p;
+        else
+            return -2;
+    }
 
     int rv = -1;
     int client = accept( sock_fd, 0, 0 );
@@ -190,6 +196,13 @@ void print_escaped( const char* buf, int size )
 {
     for ( int i = 0; i < size; i++ )
     {
+        if ( size > 80 && ( i >= 40 && i < size - 40 ) )
+        {
+            if ( i == 50 )
+                fprintf( stderr, "\" ... \"" );
+            continue;
+        }
+
         if ( buf[ i ] == '\n' )
             fprintf( stderr, "%s", "\\n" );
         else
@@ -213,23 +226,24 @@ void assert_get( link_t lnk, const char* expected )
 {
     int size = strlen( expected );
 
-    char buf[ 4096 ];
-    int got = get( lnk.in, buf, sizeof buf, 5000 );
+    int buf_size = size + 100;
+    char* buf = malloc( buf_size );
+    if ( !buf )
+        perror( "malloc" ), exit( 1 );
+
+    int got = get( lnk.in, buf, buf_size, 5000 );
     if ( got < 0 )
     {
-        fprintf( stderr, "%s while waiting for: \"", got == -2 ? "timeout" : "error" );
+        fprintf( stderr, "%s while waiting for (%d): \"", got == -2 ? "timeout" : "error", size );
         print_escaped( expected, size);
         fprintf( stderr, "\"\n" );
         exit( 1 );
     }
 
-    if ( got > ( int )sizeof buf
+    if ( got > ( int )size
             || got != size
             || memcmp( buf, expected, size ) != 0 )
     {
-        if ( got > ( int )sizeof buf )
-            got = sizeof buf;
-
         fprintf( stderr, "got (%d):      \"", got ); print_escaped( buf, got );       fprintf( stderr, "\"\n" );
         fprintf( stderr, "expected (%d): \"", size ); print_escaped( expected, size ); fprintf( stderr, "\"\n" );
         exit( 1 );

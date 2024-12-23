@@ -11,7 +11,9 @@
 #include <fcntl.h>          // open
 #include <unistd.h>         // dup2
 #include <stdio.h>          // dprintf
-#include <stdlib.h>         // getenv
+#include <stdlib.h>         // getenv, mkstemp
+#include <errno.h>          // errno
+#include <string.h>         // strerror
 
 #define OUTPUT_SOCKET "./dump"
 
@@ -20,9 +22,19 @@ void init_debug( const char* filename )
     if ( getenv( "LOGWRAP_DEBUG" ) == NULL )
         return;
     dup2( 1, 3 );
-    int f = open( filename, O_WRONLY | O_TRUNC | O_CREAT, 0666 );
+    // int f = open( filename, O_WRONLY | O_TRUNC | O_CREAT, 0666 );
+    char file[] = "debug_cmd_XXXXXX";
+    int f = mkstemp( file );
     dup2( f, 3 );
     close( f );
+}
+
+void cerror( const char* str )
+{
+    int e = errno;
+    fprintf( stderr, "%s (%d): %s\n", str, e, strerror( e ) );
+    fflush( stderr );
+    dprintf( 3, "cmd: error %s (%d): %s\n", str, e, strerror( e ) );
 }
 
 int main( int argc, char** argv )
@@ -39,23 +51,24 @@ int main( int argc, char** argv )
 
     int sock_fd = socket( AF_UNIX, SOCK_STREAM, 0 );
     if ( sock_fd == -1 )
-        return perror( "socket" ), 1;
+        return cerror( "socket" ), 1;
 
     if ( connect( sock_fd, ( struct sockaddr* )&addr, sizeof addr ) == -1 )
         // TODO: Doesn't really matter, but perhaps be cleaner about closing
         // things, or use ‹err› or similar.
-        return perror( "connect" ), 1;
+        return cerror( "connect" ), 1;
 
-    char buf[ 256 ];
+    char buf[ 128 ];
     int bytes;
 
     // Echo input from stdin to the socket.
     while ( ( bytes = read( 0, buf, sizeof buf ) ) > 0 )
     {
         dprintf( 3, "cmd: read \"%.*s\"\n", bytes, buf );
+
         int r = write( sock_fd, buf, bytes );
         if ( r == -1 )
-            return perror( "write" ), 1;
+            return cerror( "write" ), 1;
 
         if ( r != bytes )
             return fprintf( stderr, "written less\n" ), 1;
