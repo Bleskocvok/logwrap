@@ -15,6 +15,8 @@
 #include <stdlib.h>         // exit, NULL, malloc
 #include <assert.h>         // assert
 #include <string.h>         // memcmp, strerror, strlen, memset
+#include <stdio.h>          // snprintf
+#include <string.h>         // strlen
 
 args_t new_args()
 {
@@ -255,6 +257,16 @@ void assert_get( link_t lnk, const char* expected )
     free( buf );
 }
 
+void config_init( config_t* c, const char* co, const char* ce,
+                               const char* so, const char* se )
+{
+    int size = sizeof c->CMD_OUT;
+    snprintf( c->CMD_OUT, size, "%s", co );
+    snprintf( c->CMD_ERR, size, "%s", ce );
+    snprintf( c->SERVER_OUT, size, "%s", so );
+    snprintf( c->SERVER_ERR, size, "%s", se );
+}
+
 void begin( config_t* c )
 {
     unlink( c->CMD_OUT );
@@ -302,4 +314,37 @@ end:
     unlink( c->CMD_ERR );
     unlink( c->SERVER_OUT );
     unlink( c->SERVER_ERR );
+}
+
+char* make_random_long( uint32_t seed, unsigned len, int newline )
+{
+    char* str = malloc( len + 2 );
+    if ( !str )
+    {
+        perror( "malloc" );
+        exit( 1 );
+    }
+
+    str[ len ] = 0;
+    str[ len + 1 ] = 0;
+
+    static const char symbols[] = "abcdefghijklmnopqrstuvwxyz";
+    unsigned count = strlen( symbols );
+
+    // LGC constants
+    static uint32_t mult = 1103515245;
+    static uint32_t add = 12345;
+
+    uint32_t idx = seed * mult + add;
+
+    for ( unsigned i = 0; i < len; i++ )
+    {
+        str[ i ] = symbols[ idx % count ];
+        idx = idx * mult + add;
+    }
+
+    if ( newline )
+        str[ len ] = '\n';
+
+    return str;
 }

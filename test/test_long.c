@@ -7,64 +7,18 @@
 
 #include <stdlib.h>         // NULL, malloc, exit
 #include <assert.h>         // assert
-#include <stdio.h>          // snprintf
-#include <string.h>         // strlen
 #include <stdint.h>         // uint32_t
-
-char* make_random_long( uint32_t seed, unsigned len, int newline )
-{
-    char* str = malloc( len + 2 );
-    if ( !str )
-    {
-        perror( "malloc" );
-        exit( 1 );
-    }
-
-    str[ len ] = 0;
-    str[ len + 1 ] = 0;
-
-    static const char symbols[] = "abcdefghijklmnopqrstuvwxyz";
-    unsigned count = strlen( symbols );
-
-    // LGC constants
-    static uint32_t mult = 1103515245;
-    static uint32_t add = 12345;
-
-    uint32_t idx = seed * mult + add;
-
-    for ( unsigned i = 0; i < len; i++ )
-    {
-        str[ i ] = symbols[ idx % count ];
-        idx = idx * mult + add;
-    }
-
-    if ( newline )
-        str[ len ] = '\n';
-
-    return str;
-}
 
 void test_case_long( int ensure_newline )
 {
     config_t c;
 
-    char CMD_OUT[] = "./socket_long_cmd_out_0";
-    char CMD_ERR[] = "./socket_long_cmd_err_0";
-    char SERVER_OUT[] = "./socket_long_server_out_0";
-    char SERVER_ERR[] = "./socket_long_server_err_0";
-
     if ( ensure_newline )
-    {
-        CMD_OUT[ sizeof CMD_OUT - 2 ] = '1';
-        CMD_ERR[ sizeof CMD_ERR - 2 ] = '1';
-        SERVER_OUT[ sizeof SERVER_OUT - 2 ] = '1';
-        SERVER_ERR[ sizeof SERVER_ERR - 2 ] = '1';
-    }
-
-    memcpy( &c.CMD_OUT, CMD_OUT, sizeof CMD_OUT );
-    memcpy( &c.CMD_ERR, CMD_ERR, sizeof CMD_ERR );
-    memcpy( &c.SERVER_OUT, SERVER_OUT, sizeof SERVER_OUT );
-    memcpy( &c.SERVER_ERR, SERVER_ERR, sizeof SERVER_ERR );
+        config_init( &c, "./socket_long_cmd_out_0", "./socket_long_cmd_err_0",
+                         "./socket_long_server_out_0", "./socket_long_server_err_0" );
+    else
+        config_init( &c, "./socket_long_cmd_out_1", "./socket_long_cmd_err_1",
+                         "./socket_long_server_out_1", "./socket_long_server_err_1" );
 
     c.args = new_args();
     args_push( &c.args, PROG_PATH );
@@ -72,14 +26,14 @@ void test_case_long( int ensure_newline )
         args_push( &c.args, "-n" );
     args_push( &c.args, "--" );
     args_push( &c.args, TEST_SERVER );
-    args_push( &c.args, SERVER_OUT );
-    args_push( &c.args, SERVER_ERR );
+    args_push( &c.args, c.SERVER_OUT );
+    args_push( &c.args, c.SERVER_ERR );
     args_push( &c.args, "--" );
     args_push( &c.args, TEST_CMD );
-    args_push( &c.args, CMD_OUT );
+    args_push( &c.args, c.CMD_OUT );
     args_push( &c.args, "--" );
     args_push( &c.args, TEST_CMD );
-    args_push( &c.args, CMD_ERR );
+    args_push( &c.args, c.CMD_ERR );
 
     begin( &c );
 
