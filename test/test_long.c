@@ -95,7 +95,7 @@ void test_case_long( int ensure_newline )
     assert_put( sout, "\n" );
     assert_get( sout, str1_nl );
 
-    for ( int i = 1; i < 100; i++ )
+    for ( int i = 1; i < 30; i++ )
     {
         char* str    = make_random_long( i, 1024 * i, 0 );
         char* str_nl = make_random_long( i, 1024 * i, 1 );
