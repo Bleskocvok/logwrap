@@ -107,7 +107,7 @@ int test_case_long( int ensure_newline )
     // TODO: Figure out why it fails for 100. The issue is probably in the
     // tests, not the code itself.
     //       for ( int i = 1; i < 100; i++ )
-    for ( int i = 1; i < 30; i++ )
+    for ( int i = 1; i < 100; i++ )
     {
         char* str    = make_random_long( i, 1024 * i, 0 );
         char* str_nl = make_random_long( i, 1024 * i, 1 );
@@ -125,7 +125,7 @@ int test_case_long( int ensure_newline )
 
     assert_timeout_get( ser, 1000 );
 
-    assert_put( sout, after_konec );
+    assert_put( ser, after_konec );
 
     // Closes one connection.
     close( sout.out );
@@ -139,8 +139,7 @@ int test_case_long( int ensure_newline )
     close( ser.out );
     ser.out = -1;
 
-    if ( ensure_newline )
-        assert_get( ser, ensure_newline ? after_konec_nl : after_konec );
+    assert_get( ser, ensure_newline ? after_konec_nl : after_konec );
 
     // We shouldn't get any extra error output either.
     assert_timeout_get( ser, 1000 );
@@ -173,4 +172,5 @@ end:
 int main( void )
 {
     test_case_long( 0 );
+    test_case_long( 1 );
 }
