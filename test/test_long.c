@@ -139,7 +139,6 @@ void test_case_long( int ensure_newline )
 
     end( &c );
 }
-}
 
 int main( void )
 {
