@@ -37,7 +37,8 @@ void cerror( const char* str )
 
 int main( int argc, char** argv )
 {
-    init_debug( "debug_cmd_XXXXXX" );
+    char debug_filename[] = "debug_cmd_XXXXXX";
+    init_debug( debug_filename );
 
     const char* filename = argc >= 2 ? argv[ 1 ] : OUTPUT_SOCKET;
 

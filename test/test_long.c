@@ -44,9 +44,9 @@ char* make_random_long( uint32_t seed, unsigned len, int newline )
     return str;
 }
 
-int test_case_long( int ensure_newline )
+void test_case_long( int ensure_newline )
 {
-    int rv = 1;
+    config_t c;
 
     char CMD_OUT[] = "./socket_long_cmd_out_0";
     char CMD_ERR[] = "./socket_long_cmd_err_0";
@@ -61,39 +61,30 @@ int test_case_long( int ensure_newline )
         SERVER_ERR[ sizeof SERVER_ERR - 2 ] = '1';
     }
 
-    unlink( CMD_OUT );
-    unlink( CMD_ERR );
-    unlink( SERVER_OUT );
-    unlink( SERVER_ERR );
+    memcpy( &c.CMD_OUT, CMD_OUT, sizeof CMD_OUT );
+    memcpy( &c.CMD_ERR, CMD_ERR, sizeof CMD_ERR );
+    memcpy( &c.SERVER_OUT, SERVER_OUT, sizeof SERVER_OUT );
+    memcpy( &c.SERVER_ERR, SERVER_ERR, sizeof SERVER_ERR );
 
-    link_t sout = { .in = -1, .out = -1, };
-    link_t ser = { .in = -1, .out = -1, };;
-
-    sout.in = start_server( CMD_OUT );
-    if ( sout.in == -1 ) goto end;
-
-    ser.in = start_server( CMD_ERR );
-    if ( ser.in == -1 ) goto end;
-
-    args_t args = new_args();
-    args_push( &args, PROG_PATH );
+    c.args = new_args();
+    args_push( &c.args, PROG_PATH );
     if ( ensure_newline )
-        args_push( &args, "-n" );
-    args_push( &args, "--" );
-    args_push( &args, TEST_SERVER );
-    args_push( &args, SERVER_OUT );
-    args_push( &args, SERVER_ERR );
-    args_push( &args, "--" );
-    args_push( &args, TEST_CMD );
-    args_push( &args, CMD_OUT );
-    args_push( &args, "--" );
-    args_push( &args, TEST_CMD );
-    args_push( &args, CMD_ERR );
+        args_push( &c.args, "-n" );
+    args_push( &c.args, "--" );
+    args_push( &c.args, TEST_SERVER );
+    args_push( &c.args, SERVER_OUT );
+    args_push( &c.args, SERVER_ERR );
+    args_push( &c.args, "--" );
+    args_push( &c.args, TEST_CMD );
+    args_push( &c.args, CMD_OUT );
+    args_push( &c.args, "--" );
+    args_push( &c.args, TEST_CMD );
+    args_push( &c.args, CMD_ERR );
 
-    pid_t pid = fork_exec( args.data[ 0 ], args.data );
+    begin( &c );
 
-    sout.out = start_connection( SERVER_OUT );
-    ser.out = start_connection( SERVER_ERR );
+    link_t sout = c.sout;
+    link_t ser = c.ser;
 
     char* str1           = make_random_long( 0, 256, 0 );
     char* str1_nl        = make_random_long( 0, 256, 1 );
@@ -104,9 +95,6 @@ int test_case_long( int ensure_newline )
     assert_put( sout, "\n" );
     assert_get( sout, str1_nl );
 
-    // TODO: Figure out why it fails for 100. The issue is probably in the
-    // tests, not the code itself.
-    //       for ( int i = 1; i < 100; i++ )
     for ( int i = 1; i < 100; i++ )
     {
         char* str    = make_random_long( i, 1024 * i, 0 );
@@ -149,24 +137,8 @@ int test_case_long( int ensure_newline )
     free( after_konec );
     free( after_konec_nl );
 
-    int status;
-    if ( waitpid( pid, &status, 0 ) == -1 )
-        goto end;
-
-    assert( WIFEXITED( status ) );
-    assert( WEXITSTATUS( status ) == 0 );
-
-    rv = 0;
-end:
-    if ( sout.in != -1 ) close( sout.in );
-    if ( sout.out != -1 ) close( sout.out );
-    if ( ser.in != -1 ) close( ser.in );
-    if ( ser.out != -1 ) close( ser.out );
-    unlink( CMD_OUT );
-    unlink( CMD_ERR );
-    unlink( SERVER_OUT );
-    unlink( SERVER_ERR );
-    return rv;
+    end( &c );
+}
 }
 
 int main( void )

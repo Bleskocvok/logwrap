@@ -22,6 +22,22 @@ typedef struct
 
 } args_t;
 
+typedef struct
+{
+    char CMD_OUT[ 128 ];
+    char CMD_ERR[ 128 ];
+    char SERVER_OUT[ 128 ];
+    char SERVER_ERR[ 128 ];
+
+    args_t args;
+
+    link_t sout;
+    link_t ser;
+
+    pid_t pid;
+
+} config_t;
+
 int start_server( const char* cmd_output_socket );
 int start_connection( const char* server_input );
 void error( const char* str );
@@ -34,3 +50,6 @@ void ms_sleep( int ms );
 args_t new_args();
 void args_push( args_t* args, const char* arg );
 void args_append( args_t* args, const char* elems[], int size );
+
+void begin( config_t* conf );
+void end( config_t* conf );

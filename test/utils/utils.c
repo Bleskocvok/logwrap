@@ -189,6 +189,9 @@ pid_t fork_exec( const char* cmd, const char* argv[] )
         exit( 200 );
     }
 
+    if ( pid == -1 )
+        perror( "utils: fork" ), exit( 1 );
+
     return pid;
 }
 
@@ -248,4 +251,55 @@ void assert_get( link_t lnk, const char* expected )
         fprintf( stderr, "expected (%d): \"", size ); print_escaped( expected, size ); fprintf( stderr, "\"\n" );
         exit( 1 );
     }
+
+    free( buf );
+}
+
+void begin( config_t* c )
+{
+    unlink( c->CMD_OUT );
+    unlink( c->CMD_ERR );
+    unlink( c->SERVER_OUT );
+    unlink( c->SERVER_ERR );
+
+    c->sout.in = start_server( c->CMD_OUT );
+    if ( c->sout.in == -1 ) goto end;
+
+    c->ser.in = start_server( c->CMD_ERR );
+    if ( c->ser.in == -1 ) goto end;
+
+    c->pid = fork_exec( c->args.data[ 0 ], c->args.data );
+
+    c->sout.out = start_connection( c->SERVER_OUT );
+    c->ser.out = start_connection( c->SERVER_ERR );
+    return;
+
+end:
+    fprintf( stderr, "begin: error\n" );
+    exit( 1 );
+}
+
+void end( config_t* c )
+{
+    unlink( c->CMD_OUT );
+    unlink( c->CMD_ERR );
+    unlink( c->SERVER_OUT );
+    unlink( c->SERVER_ERR );
+
+    int status;
+    if ( waitpid( c->pid, &status, 0 ) == -1 )
+        goto end;
+
+    assert( WIFEXITED( status ) );
+    assert( WEXITSTATUS( status ) == 0 );
+
+end:
+    if ( c->sout.in != -1 ) close( c->sout.in );
+    if ( c->sout.out != -1 ) close( c->sout.out );
+    if ( c->ser.in != -1 ) close( c->ser.in );
+    if ( c->ser.out != -1 ) close( c->ser.out );
+    unlink( c->CMD_OUT );
+    unlink( c->CMD_ERR );
+    unlink( c->SERVER_OUT );
+    unlink( c->SERVER_ERR );
 }
