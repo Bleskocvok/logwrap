@@ -248,41 +248,43 @@ void buf_flush( buf_t* b, output_t* output, const char* prefix, int ignore_newli
     for ( unsigned i = 0; i < b->size; ++i )
     {
         if ( b->data[ i ] == '\n' )
+        {
             end = i + 1;
+            // TODO: Refactor this.
+            if ( DELAY_MSEC < 0 )
+                break;
+        }
     }
     if ( ignore_newline )
         end = b->size;
 
     // This is to ensure that no data outside the buffer is read. The stored
     // string doesn't have to have a terminating null.
-    unsigned size = b->cap;
-    if ( b->size < size )
-        size = b->size;
 
     if ( b->data[ end - 1 ] == '\n' || !ENSURE_NEWLINE )
     {
-        snprintf( b->aux_data, buf_aux_size( b ), "%s%.*s", prefix, size, b->data );
+        snprintf( b->aux_data, buf_aux_size( b ), "%s%.*s", prefix, end, b->data );
     }
     else
     {
-        snprintf( b->aux_data, buf_aux_size( b ), "%s%.*s\n", prefix, size, b->data );
+        snprintf( b->aux_data, buf_aux_size( b ), "%s%.*s\n", prefix, end, b->data );
         // For the added newline.
-        end++;
+        // end++;
     }
 
-    output_flush_cmd( output, b->aux_data, end + strlen( prefix ) );
+    output_flush_cmd( output, b->aux_data, strlen( b->aux_data ) );
 
     int new_size = b->size - end;
+    if ( new_size < 0 )
+        new_size = 0;
     if ( end < b->size )
         memmove( b->data, b->data + end, new_size );
 
-    // Not necessary, but can help with debugging.
-    if ( new_size < ( int )b->cap )
         b->data[ new_size ] = 0;
 
     b->size = new_size;
     b->time_begin = b->time_unfinished;
-    b->newline_present = 0;
+    b->newline_present = memchr( b->data, '\n', b->size ) != NULL;
 
     b->time_begin = new_size > 0 ? b->time_unfinished : get_time();
 }
@@ -293,6 +295,8 @@ void buf_try_flush( buf_t* b, output_t* o, int thresh_ms, const char* prefix )
     if ( !b->newline_present )
         return;
 
+    do
+    {
     struct timespec now = get_time();
 
     // TODO: This sucks, use a better way to do arithmetics with timespec.
@@ -301,6 +305,10 @@ void buf_try_flush( buf_t* b, output_t* o, int thresh_ms, const char* prefix )
     diff *= 1e3;
     if ( thresh_ms < 0 || diff >= thresh_ms )
         buf_flush( b, o, prefix, 0 );
+    else
+        break;
+
+    } while ( b->newline_present );
 }
 
 
