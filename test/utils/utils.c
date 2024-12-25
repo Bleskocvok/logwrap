@@ -138,7 +138,7 @@ int start_server( const char* cmd_output_socket )
         goto bad;
     }
 
-    if ( listen( sock_fd, 5 ) == -1 )
+    if ( listen( sock_fd, 500 ) == -1 )
     {
         perror( "listen" );
         goto bad;
@@ -190,9 +190,6 @@ pid_t fork_exec( const char* cmd, const char* argv[] )
         perror( "execv" );
         exit( 200 );
     }
-
-    if ( pid == -1 )
-        perror( "utils: fork" ), exit( 1 );
 
     return pid;
 }

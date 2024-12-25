@@ -72,7 +72,7 @@ int start_server( const char* filename )
         return -1;
     }
 
-    if ( listen( sock_fd, 5 ) == -1 )
+    if ( listen( sock_fd, 500 ) == -1 )
     {
         perror( "listen" );
         close( sock_fd );
