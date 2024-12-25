@@ -9,7 +9,6 @@
 #include <assert.h>         // assert
 #include <stdint.h>         // uint32_t
 #include <string.h>         // memset
-#include <stdio.h>          // printf
 
 void test_case_lot_data()
 {
@@ -101,19 +100,12 @@ void test_case_short_spam()
         memset( str, '\n', newlines );
         str[ newlines ] = 0;
 
-// printf( "newlines=%d\n", newlines );
-
         assert_put( ser, str );
         assert_put( sout, str );
         for ( int j = 0; j < newlines; j++ )
         {
-// fprintf(stderr, "j=%d    ", j);
-// fprintf(stderr, "\tget e %d: ", j); fflush(stderr);
             assert_get( ser, "\n" );
-// fprintf(stderr, "ok");
-// fprintf(stderr, "    get o %d: ", j); fflush(stderr);
             assert_get( sout, "\n" );
-// fprintf(stderr, "ok\n");
         }
     }
 

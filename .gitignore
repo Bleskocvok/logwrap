@@ -7,6 +7,7 @@
 /test/test_timed
 /test/test_timed_detach
 /test/test_long
+/test/test_lot_data
 /test/utils/cmd
 /test/utils/exit
 /test/utils/server
