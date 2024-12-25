@@ -7,7 +7,7 @@ logwrap: logwrap.o
 logwrap.o: logwrap.c
 
 test: logwrap
-	$(MAKE) -C test/ -j
+	$(MAKE) -C test/ run_all -j
 
 clean:
 	$(MAKE) -C test/ clean

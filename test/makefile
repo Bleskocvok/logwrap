@@ -4,7 +4,7 @@ UTILS = utils/server utils/cmd utils/exit utils/signal
 TESTS = test_quit test_simple test_advanced test_advanced_newline test_timed test_timed_detach test_long
 RUN_TESTS = $(TESTS:%=run.%)
 
-all: run_all
+all: $(UTILS) $(TESTS)
 
 run_test: utils/utils.o
 
