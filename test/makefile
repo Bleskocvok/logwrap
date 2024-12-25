@@ -1,7 +1,8 @@
 CFLAGS = -std=c99 -Wall -Wextra
 
 UTILS = utils/server utils/cmd utils/exit utils/signal
-TESTS = test_quit test_simple test_advanced test_advanced_newline test_timed test_timed_detach test_long
+TESTS = test_quit test_simple test_advanced test_advanced_newline test_timed \
+		test_timed_detach test_long test_lot_data
 RUN_TESTS = $(TESTS:%=run.%)
 
 all: $(UTILS) $(TESTS)
@@ -15,6 +16,7 @@ test_advanced_newline: utils/utils.c utils/test_advanced.c
 test_timed:            utils/utils.c utils/test_timed.c
 test_timed_detach:     utils/utils.c utils/test_timed.c
 test_long:             utils/utils.c
+test_lot_data:         utils/utils.c
 
 utils/server: utils/server.c
 utils/cmd: utils/cmd.c
