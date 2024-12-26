@@ -1,0 +1,11 @@
+#!/bin/sh
+
+set -e
+
+make
+mkdir -p test-build
+cd test-build
+ln -s . utils || true
+cmake ../test/
+make
+ctest -j100 --output-on-failure
