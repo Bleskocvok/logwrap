@@ -10,6 +10,7 @@
 #include <stdlib.h>     // NULL, malloc, free, exit, strtod
 #include <string.h>     // memset, memcpy, strcmp
 #include <signal.h>     // signal
+#include <assert.h>     // assert
 
 
 static int DELAY_MSEC = -1;
@@ -269,8 +270,7 @@ void buf_flush( buf_t* b, output_t* output, const char* prefix, int ignore_newli
     if ( ignore_newline )
         end = b->size;
 
-    // This is to ensure that no data outside the buffer is read. The stored
-    // string doesn't have to have a terminating null.
+    assert( end > 0 );
 
     if ( b->data[ end - 1 ] == '\n' || !ENSURE_NEWLINE )
     {
@@ -291,7 +291,7 @@ void buf_flush( buf_t* b, output_t* output, const char* prefix, int ignore_newli
     if ( end < b->size )
         memmove( b->data, b->data + end, new_size );
 
-        b->data[ new_size ] = 0;
+    b->data[ new_size ] = 0;
 
     b->size = new_size;
     b->time_begin = b->time_unfinished;
