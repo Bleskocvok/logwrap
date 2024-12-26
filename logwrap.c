@@ -90,6 +90,12 @@ void pid_vec_try_reap( pid_vec_t* vec )
             perror( "waitpid" );
             continue;
         }
+
+        if ( WIFEXITED( status ) && WEXITSTATUS( status ) != 0 )
+            dprintf( 2, "warning: exit status %d\n", WEXITSTATUS( status ) );
+        if ( WIFSIGNALED( status ) )
+            dprintf( 2, "warning: signaled %d\n", WTERMSIG( status ) );
+
         remove[ i ] = r > 0;
     }
 
@@ -126,6 +132,11 @@ void pid_vec_wait( pid_vec_t* vec )
         int status;
         if ( waitpid( vec->pids[ i ], &status, 0 ) == -1 )
             perror( "waitpid" );
+
+        if ( WIFEXITED( status ) && WEXITSTATUS( status ) != 0 )
+            dprintf( 2, "warning: exit status %d\n", WEXITSTATUS( status ) );
+        if ( WIFSIGNALED( status ) )
+            dprintf( 2, "warning: signaled %d\n", WTERMSIG( status ) );
     }
 
     pid_vec_init( vec );
