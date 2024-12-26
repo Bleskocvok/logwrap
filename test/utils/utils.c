@@ -138,7 +138,7 @@ int start_server( const char* cmd_output_socket )
         goto bad;
     }
 
-    if ( listen( sock_fd, 500 ) == -1 )
+    if ( listen( sock_fd, 1000 ) == -1 )
     {
         perror( "listen" );
         goto bad;
