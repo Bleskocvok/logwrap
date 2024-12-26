@@ -1,5 +1,9 @@
 CFLAGS = -std=c99 -Wall -Wextra
 
+ifdef DEBUG
+	CFLAGS += -g
+endif
+
 all: logwrap
 
 logwrap: logwrap.o

@@ -1,5 +1,9 @@
 CFLAGS = -std=c99 -Wall -Wextra
 
+ifdef DEBUG
+	CFLAGS += -g
+endif
+
 UTILS = utils/server utils/cmd utils/exit utils/signal
 TESTS = test_quit test_simple test_advanced test_advanced_newline test_timed \
 		test_timed_detach test_long test_lot_data
