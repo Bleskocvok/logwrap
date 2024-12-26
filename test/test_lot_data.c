@@ -93,9 +93,12 @@ void test_case_short_spam()
     link_t sout = c.sout;
     link_t ser = c.ser;
 
-    for ( int i = 1; i < 20; i++ )
+    int nls[] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 20, 100, 200 };
+
+    for ( unsigned i = 0; i < sizeof nls / sizeof *nls; i++ )
     {
-        int newlines = i;
+        int newlines = nls[ i ];
+
         char str[ newlines + 1 ];
         memset( str, '\n', newlines );
         str[ newlines ] = 0;
@@ -131,6 +134,6 @@ void test_case_short_spam()
 
 int main( void )
 {
-    test_case_lot_data();
     test_case_short_spam();
+    test_case_lot_data();
 }
