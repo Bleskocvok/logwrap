@@ -5,16 +5,16 @@
 #include <unistd.h>         // close
 #include <sys/wait.h>       // waitpid
 
-#include <stdlib.h>         // NULL, malloc, exit
 #include <assert.h>         // assert
 #include <stdint.h>         // uint32_t
+#include <string.h>         // memset
 
-void test_case_lot_data()
+void test_case_short_spam()
 {
     config_t c;
 
-    config_init( &c, "./socket_lot_data_cmd_out_0", "./socket_lot_data_cmd_err_0",
-                     "./socket_lot_data_server_out_0", "./socket_lot_data_server_err_0" );
+    config_init( &c, "./socket_short_spam_cmd_out_0", "./socket_short_spam_cmd_err_0",
+                     "./socket_short_spam_server_out_0", "./socket_short_spam_server_err_0" );
 
     c.args = new_args();
     args_push( &c.args, PROG_PATH );
@@ -34,17 +34,23 @@ void test_case_lot_data()
     link_t sout = c.sout;
     link_t ser = c.ser;
 
-    for ( int i = 0; i < 300; i++ )
+    int nls[] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 20, 100, 200 };
+
+    for ( unsigned i = 0; i < sizeof nls / sizeof *nls; i++ )
     {
-        char* str_nl = make_random_long( i, 1024 + i % 1024, 1 );
+        int newlines = nls[ i ];
 
-        assert_put( ser, str_nl );
-        assert_put( sout, str_nl );
+        char str[ newlines + 1 ];
+        memset( str, '\n', newlines );
+        str[ newlines ] = 0;
 
-        assert_get( ser, str_nl );
-        assert_get( sout, str_nl );
-
-        free( str_nl );
+        assert_put( ser, str );
+        assert_put( sout, str );
+        for ( int j = 0; j < newlines; j++ )
+        {
+            assert_get( ser, "\n" );
+            assert_get( sout, "\n" );
+        }
     }
 
     assert_timeout_get( ser, 1000 );
@@ -69,5 +75,5 @@ void test_case_lot_data()
 
 int main( void )
 {
-    test_case_lot_data();
+    test_case_short_spam();
 }

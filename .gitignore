@@ -8,6 +8,7 @@
 /test/test_timed_detach
 /test/test_long
 /test/test_lot_data
+/test/test_short_spam
 /test/utils/cmd
 /test/utils/exit
 /test/utils/server

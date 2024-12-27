@@ -212,6 +212,14 @@ void print_escaped( const char* buf, int size )
     }
 }
 
+void print_quoted( const char* pre, const char* str, int len )
+{
+    fprintf( stderr, "%s (%d): \"", pre, len );
+    print_escaped( str, len );
+    fprintf( stderr, "\"\n" );
+    fflush( stderr );
+}
+
 void assert_put( link_t lnk, const char* str )
 {
     assert( put( lnk.out, str, strlen( str ) ) == 0 );
