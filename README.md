@@ -85,7 +85,7 @@ logwrap -s 1.5 -d ./app -- ./send-email out -- ./send-email err
 
 2. Install
 
-    The resulting executable can be moved to a directory listen in `PATH`.
+    The resulting executable can be moved to a directory listed in `PATH`.
     Which can be for instance `~/bin`.
 
     ```
