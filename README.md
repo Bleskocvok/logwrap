@@ -61,7 +61,7 @@ wait for the completion of `./send-email`. This will, however, have introduce
 the race condition between the processes, which can result in a later line
 being logged before an earlier one.
 
-In conclusion, for this specific use case, the utility could be run with these
+So, for this specific use case, the utility could be run with these
 parameters.
 
 ```
