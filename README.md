@@ -2,11 +2,11 @@
 
 ![test and build badge](https://github.com/Bleskocvok/logwrap/actions/workflows/build-test.yml/badge.svg)
 
-Simple logging utility to pipe each output line into a separate process.
+Simple logging utility to pipe output lines into separate processes.
 
-It can be useful for instances where you want to handle the output in a
-separate way from the actual application. E.g., your are unable to modify the
-application or the handling of logging is in a different language.
+It can be useful in instances when you want to handle the output of a program
+in a separate way from the actual executable. E.g., you are unable to modify
+the program or the handling of logging is in a different language.
 
 Usage:
 
@@ -32,6 +32,9 @@ logwrap ./app -- ./send-email out -- ./send-email err
 ```
 
 Suppose `app` writes these lines to standard output and then terminates.
+`send-email` is a supposed executable that is placed in the working folder and
+let's say, for the purpose of this example, will send an e-mail to a particular
+address.
 
 ```
 A
@@ -43,22 +46,22 @@ The `./send-email out` command would be run three times, with each line passed t
 `stdin`. `logwrap` would wait for each invocation to complete before moving on
 to the next one.
 
-In the case the `./send-email` executable takes a long time to perform its
+In the case that the `./send-email` executable takes a long time to perform its
 task, it might be useful to invoke `logwrap` with the `-s` option. This
 requires a number of seconds. When `./app` produces a line of output,
 `./logwrap` will wait the given number of seconds before executing the
-corresponding logging process (`stdout` or `stderr`) and it will group any lines to
+corresponding logging process (for `stdout` or `stderr`) and it will group any lines to
 the same instance of executed `./send-email`.
 
 In the above example, if `./logwrap` was given the option `-s 1.5` and lines
-`A`, `B` and `Hello World` were sent in the span of one seconds, after an
-additional 0.5 seconds, `./send-email` would be run and all three lines will be
+`A`, `B` and `Hello World` were sent in the span of one second, after an
+additional 0.5 seconds, `./send-email out` would be run and all three lines will be
 passed to its standard input.
 
 Another useful option is `-d`, which will achieve that each output process is
 run detached from the main process and `./app` will never have to be delayed to
-wait for the completion of `./send-email`. This will, however, have introduce
-the race condition between the processes, which can result in a later line
+wait for the completion of `./send-email`. This will, however, introduce
+a race condition between the processes, which can result in a later line
 being logged before an earlier one.
 
 So, for this specific use case, the utility could be run with these
