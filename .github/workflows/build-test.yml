@@ -15,6 +15,7 @@ jobs:
           key: ${{ runner.os }}-cache-${{ github.sha }}
 
   run-coverage:
+    needs: run-build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@main
