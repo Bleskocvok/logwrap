@@ -13,7 +13,8 @@ TESTS = test_quit \
 		test_timed_detach \
 		test_long \
 		test_lot_data \
-		test_short_spam
+		test_short_spam \
+		test_usage
 RUN_TESTS = $(TESTS:%=run.%)
 
 all: $(UTILS) $(TESTS)
@@ -29,6 +30,7 @@ test_timed_detach:     utils/utils.c utils/test_timed.c
 test_long:             utils/utils.c
 test_lot_data:         utils/utils.c
 test_short_spam:       utils/utils.c
+test_usage:            utils/utils.c
 
 utils/server: utils/server.c
 utils/cmd: utils/cmd.c

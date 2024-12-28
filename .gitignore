@@ -9,6 +9,7 @@
 /test/test_long
 /test/test_lot_data
 /test/test_short_spam
+/test/test_usage
 /test/utils/cmd
 /test/utils/exit
 /test/utils/server
@@ -18,3 +19,4 @@
 
 /coverage/
 coverage.info
+logwrap.info
