@@ -30,6 +30,7 @@ add_executable(test_timed               ${UTILS} test_timed.c              utils
 add_executable(test_timed_detach        ${UTILS} test_timed_detach.c       utils/test_timed.c)
 add_executable(test_long                ${UTILS} test_long.c)
 add_executable(test_lot_data            ${UTILS} test_lot_data.c)
+add_executable(test_short_spam          ${UTILS} test_short_spam.c)
 
 add_test(NAME quit              COMMAND test_quit)
 add_test(NAME simple            COMMAND test_simple)
@@ -39,3 +40,4 @@ add_test(NAME timed             COMMAND test_timed)
 add_test(NAME timed_detach      COMMAND test_timed_detach)
 add_test(NAME long              COMMAND test_long)
 add_test(NAME lot_data          COMMAND test_lot_data)
+add_test(NAME short_spam        COMMAND test_short_spam)
