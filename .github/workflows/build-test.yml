@@ -24,4 +24,13 @@ jobs:
           path: test-build
           key: ${{ runner.os }}-cache-${{ github.sha }}
       - uses: hrishikesh-kadam/setup-lcov@v1
-      - run: test/coverage
+      - run: test/coverage | tee cov
+      - run: echo "COVERAGE=$(cat cov | tail -n1" >> $GITHUB_ENV
+      - name: Build-A-Badge
+        uses: peterrhodesdev/build-a-badge@v1.3.1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          filename: coverage-badge
+          label: Coverage
+          color: green
+          message: ${{ env.COVERAGE }}%
