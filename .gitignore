@@ -14,3 +14,7 @@
 /test/utils/server
 /test/utils/signal
 /test/debug*
+/test-build/
+
+/coverage/
+coverage.info

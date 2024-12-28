@@ -1,0 +1,19 @@
+#!/bin/sh
+
+# lcov --capture --directory test-build/ \
+#     --output-file coverage.info \
+#     --exclude '*test_*' \
+#     --exclude '*cmd.c*' \
+#     --exclude '*server.c*' \
+#     --exclude '*utils*'
+
+lcov --capture --directory test-build/ \
+    --output-file coverage.info
+
+# lcov --summary coverage.info
+# genhtml coverage.info --output-directory coverage
+
+file="logwrap.c"
+echo "coverage for $file"
+lcov --extract coverage.info "*$file" --output-file source_file.info \
+    | grep "lines" | awk '{print $2}' | sed 's/%//' | tail -n1

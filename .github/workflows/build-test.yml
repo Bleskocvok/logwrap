@@ -8,4 +8,31 @@ jobs:
     steps:
       - uses: actions/checkout@main
       - run: make
-      - run: make test
+      - run: test/run_tests
+      - uses: actions/cache@v3
+        with:
+          path: test-build
+          key: ${{ runner.os }}-cache-${{ github.sha }}
+
+  run-coverage:
+    needs: run-build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@main
+      - uses: actions/cache@v3
+        with:
+          path: test-build
+          key: ${{ runner.os }}-cache-${{ github.sha }}
+      - uses: hrishikesh-kadam/setup-lcov@v1
+      - run: test/coverage | tee cov
+      - run: echo "COVERAGE=$(cat cov | tail -n1)" >> $GITHUB_ENV
+      - name: Build-A-Badge
+        uses: peterrhodesdev/build-a-badge@v1.3.1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          filename: coverage
+          label: Coverage
+          color: green
+          message: ${{ env.COVERAGE }}%
+      - name: Print coverage
+        run: cat cov | tail -n1

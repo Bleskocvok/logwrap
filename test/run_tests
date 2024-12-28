@@ -1,0 +1,12 @@
+#!/bin/sh
+
+set -e
+
+# make
+mkdir -p test-build
+cd test-build
+ln -s . utils || true
+cmake ../test/
+make
+cp logwrap ../
+ctest -j100 --output-on-failure -T Test -T Coverage
