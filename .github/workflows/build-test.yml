@@ -9,3 +9,17 @@ jobs:
       - uses: actions/checkout@main
       - run: make
       - run: test/run_tests
+      - uses: actions/cache@v3
+        with:
+          path: test-build
+          key: ${{ runner.os }}-cache-${{ github.sha }}
+
+  run-coverage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/cache@v3
+        with:
+          path: test-build
+          key: ${{ runner.os }}-cache-${{ github.sha }}
+      - uses: hrishikesh-kadam/setup-lcov@v1
+      - run: test/coverage
