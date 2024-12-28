@@ -25,7 +25,10 @@ jobs:
           key: ${{ runner.os }}-cache-${{ github.sha }}
       - uses: hrishikesh-kadam/setup-lcov@v1
       - run: test/coverage | tee cov
-      - run: echo "COVERAGE=$(cat cov | tail -n1)" >> $GITHUB_ENV
+      - name: Put coverage into an environment variable
+        run: echo "COVERAGE=$(cat cov | tail -n1)" >> $GITHUB_ENV
+      - name: Print coverage
+        run: cat cov | tail -n1
       - name: Build-A-Badge
         uses: peterrhodesdev/build-a-badge@v1.3.1
         with:
@@ -34,5 +37,3 @@ jobs:
           label: Coverage
           color: green
           message: ${{ env.COVERAGE }}%
-      - name: Print coverage
-        run: cat cov | tail -n1

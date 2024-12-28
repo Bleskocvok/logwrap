@@ -15,5 +15,5 @@ lcov --capture --directory test-build/ \
 
 file="logwrap.c"
 echo "coverage for $file"
-lcov --extract coverage.info "*$file" --output-file source_file.info \
+lcov --extract coverage.info "*$file" --output-file logwrap.info \
     | grep "lines" | awk '{print $2}' | sed 's/%//' | tail -n1
