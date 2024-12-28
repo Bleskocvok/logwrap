@@ -543,18 +543,6 @@ void usage( char** argv )
 }
 
 
-void print_args( prog_t prog )
-{
-    printf( "cmd → %s\n", prog.cmd );
-    for ( int i = 0; ; i++ )
-    {
-        printf( "args[ %d ] -> %s\n", i, prog.args[ i ] ? prog.args[ i ] : "NULL" );
-        if ( !prog.args[ i ] )
-            break;
-    }
-}
-
-
 void parse_args( int argc, char* const* argv, prog_t progs[ 3 ] );
 
 
