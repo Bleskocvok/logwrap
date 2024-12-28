@@ -2,7 +2,7 @@
 
 [![test and build badge](https://github.com/Bleskocvok/logwrap/actions/workflows/build-test.yml/badge.svg)](https://github.com/Bleskocvok/logwrap/actions/workflows/build-test.yml)
 
-[![coverage badge](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/wiki/Bleskocvok/logwrap/coverage-badge.md)](https://github.com/Bleskocvok/logwrap/actions/workflows/build-test.yml)
+[![coverage badge](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/wiki/Bleskocvok/logwrap/coverage.md)](https://github.com/Bleskocvok/logwrap/actions/workflows/build-test.yml)
 
 Simple logging utility to pipe output lines into separate processes.
 
