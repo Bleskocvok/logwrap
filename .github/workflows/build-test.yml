@@ -30,7 +30,9 @@ jobs:
         uses: peterrhodesdev/build-a-badge@v1.3.1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          filename: coverage-badge
+          filename: coverage
           label: Coverage
           color: green
           message: ${{ env.COVERAGE }}%
+      - name: Print coverage
+        run: cat cov | tail -n1
