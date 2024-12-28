@@ -5,11 +5,17 @@ project(logwrap)
 set(CMAKE_C_STANDARD 99)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 
-# add_executable(logwrap logwrap.c)
+
+add_compile_options(-g -coverage -ftest-coverage)
+add_link_options(-coverage)
+
+add_executable(logwrap ../logwrap.c)
+
 
 set(UTILS "utils/utils.c")
 
 enable_testing()
+include(CTest)
 
 add_executable(server   utils/server.c)
 add_executable(cmd      utils/cmd.c)
@@ -25,11 +31,11 @@ add_executable(test_timed_detach        ${UTILS} test_timed_detach.c       utils
 add_executable(test_long                ${UTILS} test_long.c)
 add_executable(test_lot_data            ${UTILS} test_lot_data.c)
 
-add_test(NAME quit                  COMMAND test_quit)
-add_test(NAME simple                COMMAND test_simple)
-add_test(NAME advanced              COMMAND test_advanced)
-add_test(NAME test_advanced_newline COMMAND test_advanced_newline)
-add_test(NAME timed                 COMMAND test_timed)
-add_test(NAME test_timed_detach     COMMAND test_timed_detach)
-add_test(NAME long                  COMMAND test_long)
-add_test(NAME lot_data              COMMAND test_lot_data)
+add_test(NAME quit              COMMAND test_quit)
+add_test(NAME simple            COMMAND test_simple)
+add_test(NAME advanced          COMMAND test_advanced)
+add_test(NAME advanced_newline  COMMAND test_advanced_newline)
+add_test(NAME timed             COMMAND test_timed)
+add_test(NAME timed_detach      COMMAND test_timed_detach)
+add_test(NAME long              COMMAND test_long)
+add_test(NAME lot_data          COMMAND test_lot_data)

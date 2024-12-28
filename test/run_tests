@@ -2,10 +2,11 @@
 
 set -e
 
-make
+# make
 mkdir -p test-build
 cd test-build
 ln -s . utils || true
 cmake ../test/
 make
-ctest -j100 --output-on-failure
+cp logwrap ../
+ctest -j100 --output-on-failure -T Test -T Coverage
