@@ -10,6 +10,8 @@
 #define TEST_EXIT "utils/exit"
 #define TEST_SIGNAL "utils/signal"
 
+#define SIZE( x ) ( sizeof x / sizeof *x )
+
 typedef struct
 {
     int in;
