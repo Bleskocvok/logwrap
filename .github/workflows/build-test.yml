@@ -17,6 +17,7 @@ jobs:
   run-coverage:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@main
       - uses: actions/cache@v3
         with:
           path: test-build
