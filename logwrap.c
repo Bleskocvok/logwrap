@@ -361,11 +361,11 @@ int fork_exec_out( prog_t prog, const char* output, int length )
 
     close( p_out[ 1 ] );
     if ( dup2( p_out[ 0 ], STDIN_FILENO ) == -1 )
-        exit( 100 );
+        exit( 200 );
     close( p_out[ 0 ] );
 
     execvp( prog.cmd, prog.args );
-    exit( 100 );
+    exit( 200 );
 }
 
 
@@ -513,13 +513,13 @@ int wrap( prog_t prog, output_t outputs[ 2 ] )
     close( p_err[ 0 ] );
     if ( dup2( p_out[ 1 ], STDOUT_FILENO ) == -1
       || dup2( p_err[ 1 ], STDERR_FILENO ) == -1 )
-        perror( "dup2" ), exit( 100 );
+        perror( "dup2" ), exit( 200 );
     close( p_out[ 1 ] );
     close( p_err[ 1 ] );
 
     execvp( prog.cmd, prog.args );
     fprintf( stderr, "exec( %s )\n", prog.cmd );
-    perror( "exec" ), exit( 100 );
+    perror( "exec" ), exit( 200 );
 }
 
 
