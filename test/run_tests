@@ -9,4 +9,4 @@ ln -s . utils || true
 cmake ../test/
 make -j
 cp logwrap ../
-ctest -j100 --output-on-failure -T Test -T Coverage
+ctest -j10000 --output-on-failure -T Test -T Coverage

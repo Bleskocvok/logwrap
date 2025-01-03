@@ -70,7 +70,7 @@ void test_case_process_spam()
     link_t sout = c.sout;
     link_t ser = c.ser;
 
-    int newlines = 1000;
+    int newlines = 2000;
 
     char str[ newlines + 1 ];
     memset( str, '\n', newlines );
