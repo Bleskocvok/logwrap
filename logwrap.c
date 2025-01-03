@@ -187,9 +187,8 @@ void buf_push( buf_t* b, char c )
         if ( !( ptr = realloc( b->data, 2 * b->cap ) )
           || !( aux_ptr = realloc( b->aux_data, 4 * b->cap ) ) )
         {
-            free( ptr );
-            free( aux_ptr );
             perror( "realloc" );
+            free( ptr ), free( aux_ptr );
             return;
         }
         b->data = ptr;
@@ -279,15 +278,12 @@ void buf_flush( buf_t* b, output_t* output, const char* prefix, int ignore_newli
     else
     {
         snprintf( b->aux_data, buf_aux_size( b ), "%s%.*s\n", prefix, end, b->data );
-        // For the added newline.
-        // end++;
     }
 
     output_flush_cmd( output, b->aux_data, strlen( b->aux_data ) );
 
     int new_size = b->size - end;
-    if ( new_size < 0 )
-        new_size = 0;
+
     if ( end < b->size )
         memmove( b->data, b->data + end, new_size );
 
