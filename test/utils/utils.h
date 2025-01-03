@@ -9,6 +9,7 @@
 #define TEST_CMD "utils/cmd"
 #define TEST_EXIT "utils/exit"
 #define TEST_SIGNAL "utils/signal"
+#define TEST_APPEND "utils/append"
 
 #define SIZE( x ) ( sizeof x / sizeof *x )
 

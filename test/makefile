@@ -4,7 +4,7 @@ ifdef DEBUG
 	CFLAGS += -g
 endif
 
-UTILS = utils/server utils/cmd utils/exit utils/signal
+UTILS = utils/server utils/cmd utils/exit utils/signal utils/append
 TESTS = test_quit \
 		test_simple \
 		test_advanced \
@@ -14,7 +14,8 @@ TESTS = test_quit \
 		test_long \
 		test_lot_data \
 		test_short_spam \
-		test_usage
+		test_usage \
+		test_process_spam
 RUN_TESTS = $(TESTS:%=run.%)
 
 all: $(UTILS) $(TESTS)
@@ -31,11 +32,13 @@ test_long:             utils/utils.c
 test_lot_data:         utils/utils.c
 test_short_spam:       utils/utils.c
 test_usage:            utils/utils.c
+test_process_spam:     utils/utils.c
 
 utils/server: utils/server.c
 utils/cmd: utils/cmd.c
 utils/exit: utils/exit.c
 utils/signal: utils/signal.c
+utils/append: utils/append.c
 
 tests: utils $(TESTS)
 
