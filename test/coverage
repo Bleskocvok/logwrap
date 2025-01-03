@@ -15,8 +15,10 @@ genhtml coverage.info --output-directory coverage
 
 file="logwrap.c"
 echo; echo "Coverage for $file"
+
 # Sigh… this is a workaround to make sure we see the relevant output.
 lcov --extract coverage.info "*$file" > /dev/null 2> .cov
 cat .cov; rm .cov
+
 lcov --extract coverage.info "*$file" --output-file logwrap.info \
     | grep "lines" | awk '{print $2}' | sed 's/%//' | tail -n1

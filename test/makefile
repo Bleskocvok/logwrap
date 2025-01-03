@@ -15,7 +15,8 @@ TESTS = test_quit \
 		test_lot_data \
 		test_short_spam \
 		test_usage \
-		test_process_spam
+		test_process_spam \
+		test_end_write
 RUN_TESTS = $(TESTS:%=run.%)
 
 all: $(UTILS) $(TESTS)
@@ -33,6 +34,7 @@ test_lot_data:         utils/utils.c
 test_short_spam:       utils/utils.c
 test_usage:            utils/utils.c
 test_process_spam:     utils/utils.c
+test_end_write:        utils/utils.c
 
 utils/server: utils/server.c
 utils/cmd: utils/cmd.c
