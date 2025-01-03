@@ -16,6 +16,7 @@
 /test/utils/exit
 /test/utils/server
 /test/utils/signal
+/test/utils/append
 /test/debug*
 /test-build/
 
