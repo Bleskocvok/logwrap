@@ -454,16 +454,6 @@ int parent( pid_t child, int fd_child_out, int fd_child_err, int* status,
         }
     }
 
-    // flush unterminated lines
-    for ( int i = 0; i < 2; ++i )
-    {
-        if ( polled[ i ].fd == -1 || bufs[ i ]->size == 0 )
-            continue;
-
-        if ( buf_size( bufs[ i ] ) > 0 )
-            buf_flush( bufs[ i ], outs[ i ], prefs[ i ], 1 );
-    }
-
     close( fd_child_out );
     close( fd_child_err );
 
