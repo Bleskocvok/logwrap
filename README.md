@@ -9,6 +9,9 @@ It can be useful in instances when you want to handle the output of a program
 in a separate way from the actual executable. E.g., you are unable to modify
 the program or the handling of logging is in a different language.
 
+One of the main features is the option to coalesce consecutive lines to a single
+executed process using the command line option `-s seconds`.
+
 Usage:
 
 ```
