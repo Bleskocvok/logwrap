@@ -26,6 +26,8 @@ logwrap ‹app› [args...] -- ‹cmd_for_stdout› [args...] -- ‹cmd_for_stde
 - `cmd_for_stdout` is the command/executable to pipe `stdout` to
 - `cmd_for_stderr` is the command/executable to pipe `stderr` to
 
+Show help with `logwrap -h`.
+
 
 ## Example
 
