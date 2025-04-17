@@ -28,7 +28,6 @@ logwrap ‹app› [args...] -- ‹cmd_for_stdout› [args...] -- ‹cmd_for_stde
 
 Show help with `logwrap -h`.
 
-
 ## Example
 
 Sample invocation:
