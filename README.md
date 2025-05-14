@@ -107,3 +107,6 @@ logwrap -s 1.5 -d ./app -- ./send-email out -- ./send-email err
     ```
     logwrap -h
     ```
+
+## Todo
+- Implement option `-l lines` to work similarly to `-s`, but coalesce by a number of lines instead of amount of time
