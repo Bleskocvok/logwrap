@@ -60,7 +60,7 @@ the same instance of executed `./send-email`.
 
 In the above example, if `./logwrap` was given the option `-s 1.5` and lines
 `A`, `B` and `Hello World` were sent in the span of one second, after an
-additional 0.5 seconds, `./send-email out` would be run and all three lines will be
+additional 0.5 seconds, `./send-email out` would be run once and all three lines will be
 passed to its standard input.
 
 Another useful option is `-d`, which will achieve that each output process is
