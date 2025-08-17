@@ -91,6 +91,10 @@ that should trigger alert and then sends the alert.
 
 ## Installation
 
+You can download the latest static build [on the release page](https://github.com/Bleskocvok/logwrap/releases/latest).
+
+## Build
+
 1. Build
 
     These commands will clone the project and build the `logwrap` executable
