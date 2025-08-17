@@ -19,6 +19,10 @@ static int JOIN = 0;
 static int PREFIX = 0;
 static int ENSURE_NEWLINE = 0;
 
+#ifndef VERSION
+#define VERSION "0.0.0"
+#endif
+
 
 typedef struct buf_t
 {
@@ -513,6 +517,7 @@ void help()
 {
     printf( "\n"
             "  -h           help\n"
+            "  -v           version\n"
             "  -s  sec      group consecutive messages within given window of time\n"
             "  -j           join stdout and stderr\n"
             "  -d           detach executed cmd\n"
@@ -526,6 +531,12 @@ void usage( char** argv )
 {
     printf( "usage: %s [-h] [-s sec] [-j] [-d] [-p] <cmd> [<out cmd>] [<err cmd>]\n",
             argv[ 0 ] );
+}
+
+
+void version( char** argv )
+{
+    printf( "%s: %s\n", argv[ 0 ], VERSION );
 }
 
 
@@ -545,10 +556,8 @@ int main( int argc, char** argv )
 
         char arg = argv[ 1 ][ 1 ];
 
-        if ( arg == 'h' )
-        {
-            return usage( argv ), help(), 0;
-        }
+        if ( arg == 'h' ) return usage( argv ), help(), 0;
+        if ( arg == 'v' ) return version( argv ), 0;
         if ( arg == 's' )
         {
             if ( argc < 3 ) return usage( argv ), 1;
@@ -559,22 +568,10 @@ int main( int argc, char** argv )
             argc--;
             argv++;
         }
-        else if ( arg == 'd' )
-        {
-            DETACH = 1;
-        }
-        else if ( arg == 'j' )
-        {
-            JOIN = 1;
-        }
-        else if ( arg == 'p' )
-        {
-            PREFIX = 1;
-        }
-        else if ( arg == 'n' )
-        {
-            ENSURE_NEWLINE = 1;
-        }
+        else if ( arg == 'd' ) DETACH = 1;
+        else if ( arg == 'j' ) JOIN = 1;
+        else if ( arg == 'p' ) PREFIX = 1;
+        else if ( arg == 'n' ) ENSURE_NEWLINE = 1;
         else
             return usage( argv ), 1;
 
