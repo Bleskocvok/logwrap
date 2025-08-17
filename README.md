@@ -122,7 +122,7 @@ that should trigger alert and then sends the alert.
     ```
 
 ## Todo
-- Implement option `-l lines` to work similarly to `-s`, but coalesce by a number of lines instead of amount of time
-- Provide a static executable release
-- 100% coverage
-- Option to prepend time before every line in given format
+- [ ] Implement option `-l lines` to work similarly to `-s`, but coalesce by a number of lines instead of amount of time
+- [x] Provide a static executable release
+- [ ] 100% coverage
+- [ ] Option to prepend time before every line in given format
