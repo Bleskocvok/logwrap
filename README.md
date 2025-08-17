@@ -30,7 +30,7 @@ Show help with `logwrap -h`.
 
 ## Example
 
-Sample invocation:
+### Sample invocation
 
 ```
 logwrap ./app -- ./send-email out -- ./send-email err
@@ -77,7 +77,7 @@ logwrap -s 1.5 -d ./app -- ./send-email out -- ./send-email err
 ```
 
 
-Another use case:
+### Another use case
 
 If your application writes to a log file in `/path/to/log` and you want to fire
 alerts for particular types of messages, you can use it like this.
