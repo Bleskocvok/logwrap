@@ -4,6 +4,10 @@ ifdef DEBUG
 	CFLAGS += -g
 endif
 
+ifdef VERSION
+	CFLAGS += -D VERSION=\"$(VERSION)\"
+endif
+
 all: logwrap
 
 logwrap: logwrap.o
