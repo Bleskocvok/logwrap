@@ -76,6 +76,19 @@ parameters.
 logwrap -s 1.5 -d ./app -- ./send-email out -- ./send-email err
 ```
 
+
+Another use case:
+
+If your application writes to a log file in `/path/to/log` and you want to fire
+alerts for particular types of messages, you can use it like this.
+
+```
+logwrap -- tail -f /path/to/log -- fire_alert
+```
+
+There `fire_alert` could be a simple script that checks if it contains the log
+that should trigger alert and then sends the alert.
+
 ## Installation
 
 1. Build
