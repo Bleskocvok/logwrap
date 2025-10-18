@@ -86,7 +86,7 @@ alerts for particular types of messages, you can use it like this.
 logwrap -- tail -f /path/to/log -- fire_alert
 ```
 
-There `fire_alert` could be a simple script that checks if the long contains a line
+There `fire_alert` could be a simple script that checks if the log contains a line
 that should trigger an alert and then sends the alert.
 
 ## Installation
